@@ -1,6 +1,6 @@
 #pragma once
 
-#include "config.h"
+#include "../config.h"
 
 // On my Maithoga ILI9486L display (https://www.aliexpress.com/item/3-5-inch-8P-SPI-TFT-LCD-Color-Screen-Module-ILI9486-Drive-IC-320-480-RGB/32828284227.html), the following speed settings have been tested:
 

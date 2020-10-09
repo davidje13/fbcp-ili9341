@@ -17,18 +17,17 @@
 #include <signal.h>
 
 #include "config.h"
-#include "text.h"
 #include "spi.h"
 #include "gpu.h"
-#include "statistics.h"
+#include "extras/statistics.h"
 #include "tick.h"
 #include "display.h"
 #include "util.h"
 #include "mailbox.h"
 #include "diff.h"
 #include "mem_alloc.h"
-#include "keyboard.h"
-#include "low_battery.h"
+#include "extras/keyboard.h"
+#include "extras/low_battery.h"
 
 int CountNumChangedPixels(uint16_t *framebuffer, uint16_t *prevFramebuffer)
 {
@@ -115,7 +114,7 @@ int main()
   spans = (Span*)Malloc((gpuFrameWidth * gpuFrameHeight / 2) * sizeof(Span), "main() task spans");
   int size = gpuFramebufferSizeBytes;
 #ifdef USE_GPU_VSYNC
-  // BUG in vc_dispmanx_resource_read_data(!!): If one is capturing a small subrectangle of a large screen resource rectangle, the destination pointer 
+  // BUG in vc_dispmanx_resource_read_data(!!): If one is capturing a small subrectangle of a large screen resource rectangle, the destination pointer
   // is in vc_dispmanx_resource_read_data() incorrectly still taken to point to the top-left corner of the large screen resource, instead of the top-left
   // corner of the subrectangle to capture. Therefore do dirty pointer arithmetic to adjust for this. To make this safe, videoCoreFramebuffer is allocated
   // double its needed size so that this adjusted pointer does not reference outside allocated memory (if it did, vc_dispmanx_resource_read_data() was seen

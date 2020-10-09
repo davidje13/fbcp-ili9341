@@ -1,15 +1,13 @@
-#include "config.h"
+#include "../config.h"
 
-// TODO: Share common parts of this file with ILI9341 to avoid code duplication
+#ifdef MZ61581
 
-#ifdef HX8357D
-
-#include "spi.h"
+#include "../spi.h"
 
 #include <memory.h>
 #include <stdio.h>
 
-void InitHX8357D()
+void InitMZ61581()
 {
   // If a Reset pin is defined, toggle it briefly high->low->high to enable the device. Some devices do not have a reset pin, in which case compile with GPIO_TFT_RESET_PIN left undefined.
 #if defined(GPIO_TFT_RESET_PIN) && GPIO_TFT_RESET_PIN >= 0
@@ -29,9 +27,23 @@ void InitHX8357D()
 
   BEGIN_SPI_COMMUNICATION();
   {
-    SPI_TRANSFER(0x01/*Software Reset*/);
-    usleep(5*1000);
-    SPI_TRANSFER(0x28/*Display OFF*/);
+    // Reverse engineered with logic analyzer, not sure what these mean. If you have a data sheet for MZ61581, please send it my way.
+    SPI_TRANSFER(0xB0, 0x00);
+    SPI_TRANSFER(0xB3, 0x02, 0x00, 0x00, 0x00);
+    SPI_TRANSFER(0xC0, 0x13, 0x3B, 0x00, 0x02, 0x00, 0x01, 0x00, 0x43);
+    SPI_TRANSFER(0xC1, 0x08, 0x16, 0x08, 0x08);
+    SPI_TRANSFER(0xC4, 0x11, 0x07, 0x03, 0x03);
+    SPI_TRANSFER(0xC6, 0x00);
+    SPI_TRANSFER(0xC8, 0x03, 0x03, 0x13, 0x5C, 0x03, 0x07, 0x14, 0x08, 0x00, 0x21, 0x08, 0x14, 0x07, 0x53, 0x0C, 0x13, 0x03, 0x03, 0x21, 0x00);
+    SPI_TRANSFER(0x35, 0x00);
+    SPI_TRANSFER(0x44, 0x00, 0x01);
+    SPI_TRANSFER(0xD0, 0x07, 0x07, 0x1D, 0x03);
+    SPI_TRANSFER(0xD1, 0x03, 0x30, 0x10);
+    SPI_TRANSFER(0xD2, 0x03, 0x14, 0x04);
+
+    // The following coincide with e.g. ILI9341.
+
+    SPI_TRANSFER(0x3A/*COLMOD: Pixel Format Set*/, 0x55/*DPI=16bits/pixel,DBI=16bits/pixel*/);
 
 #define MADCTL_BGR_PIXEL_ORDER (1<<3)
 #define MADCTL_ROW_COLUMN_EXCHANGE (1<<5)
@@ -39,7 +51,7 @@ void InitHX8357D()
 #define MADCTL_ROW_ADDRESS_ORDER_SWAP (1<<7)
 #define MADCTL_ROTATE_180_DEGREES (MADCTL_COLUMN_ADDRESS_ORDER_SWAP | MADCTL_ROW_ADDRESS_ORDER_SWAP)
 
-    uint8_t madctl = 0;
+    uint8_t madctl = MADCTL_COLUMN_ADDRESS_ORDER_SWAP;
 #ifndef DISPLAY_SWAP_BGR
     madctl |= MADCTL_BGR_PIXEL_ORDER;
 #endif
@@ -50,22 +62,17 @@ void InitHX8357D()
     madctl ^= MADCTL_ROTATE_180_DEGREES;
 #endif
     SPI_TRANSFER(0x36/*MADCTL: Memory Access Control*/, madctl);
-    SPI_TRANSFER(0x3A/*Interface Pixel Format*/, 0x55/*16 bits/pixel*/);
-
-#ifdef DISPLAY_INVERT_COLORS
-    SPI_TRANSFER(0x21/*Display Inversion ON*/);
-#else
-    SPI_TRANSFER(0x20/*Display Inversion OFF*/);
-#endif
 
     SPI_TRANSFER(0x11/*Sleep Out*/);
-    usleep(120 * 1000);
+    usleep(300 * 1000);
     SPI_TRANSFER(0x29/*Display ON*/);
+    SPI_TRANSFER(0x2C);
 
-#if defined(GPIO_TFT_BACKLIGHT) && defined(BACKLIGHT_CONTROL)
+    // TONTEC_MZ61581 has backlight active when backlight GPIO is low, and at boot, it seems to be disabled, so always need to enable it.
+#if defined(GPIO_TFT_BACKLIGHT) && (defined(BACKLIGHT_CONTROL) || defined(TONTEC_MZ61581))
     printf("Setting TFT backlight on at pin %d\n", GPIO_TFT_BACKLIGHT);
     SET_GPIO_MODE(GPIO_TFT_BACKLIGHT, 0x01); // Set backlight pin to digital 0/1 output mode (0x01) in case it had been PWM controlled
-    SET_GPIO(GPIO_TFT_BACKLIGHT); // And turn the backlight on.
+    CLEAR_GPIO(GPIO_TFT_BACKLIGHT); // And turn the backlight on. MZ61581 backlight is on when the Backlight GPIO pin is 0.
 #endif
 
     ClearScreen();
@@ -79,17 +86,12 @@ void InitHX8357D()
   spi->clk = SPI_BUS_CLOCK_DIVISOR;
 }
 
-void TurnBacklightOff()
+void TurnDisplayOff()
 {
 #if defined(GPIO_TFT_BACKLIGHT) && defined(BACKLIGHT_CONTROL)
   SET_GPIO_MODE(GPIO_TFT_BACKLIGHT, 0x01); // Set backlight pin to digital 0/1 output mode (0x01) in case it had been PWM controlled
-  CLEAR_GPIO(GPIO_TFT_BACKLIGHT); // And turn the backlight off.
+  SET_GPIO(GPIO_TFT_BACKLIGHT); // And turn the backlight off.
 #endif
-}
-
-void TurnDisplayOff()
-{
-  TurnBacklightOff();
 #if 0
   QUEUE_SPI_TRANSFER(0x28/*Display OFF*/);
   QUEUE_SPI_TRANSFER(0x10/*Enter Sleep Mode*/);
@@ -107,7 +109,7 @@ void TurnDisplayOn()
 #endif
 #if defined(GPIO_TFT_BACKLIGHT) && defined(BACKLIGHT_CONTROL)
   SET_GPIO_MODE(GPIO_TFT_BACKLIGHT, 0x01); // Set backlight pin to digital 0/1 output mode (0x01) in case it had been PWM controlled
-  SET_GPIO(GPIO_TFT_BACKLIGHT); // And turn the backlight on.
+  CLEAR_GPIO(GPIO_TFT_BACKLIGHT); // And turn the backlight on.
 #endif
 //  printf("Turned display ON\n");
 }
@@ -116,7 +118,6 @@ void DeinitSPIDisplay()
 {
   ClearScreen();
   SPI_TRANSFER(/*Display OFF*/0x28);
-  TurnBacklightOff();
 }
 
 #endif

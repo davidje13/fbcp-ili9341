@@ -1,8 +1,8 @@
-#include "config.h"
+#include "../config.h"
 
 #if defined(ILI9341) || defined(ILI9340)
 
-#include "spi.h"
+#include "../spi.h"
 
 #include <memory.h>
 #include <stdio.h>
@@ -37,7 +37,7 @@ void InitILI9341()
     SPI_TRANSFER(0xEA/*Driver Timing Control B*/, 0x00, 0x00); // Not sure what the effect is, set to default as per ILI9341 Application Notes v0.6 (2011/03/11) document (which is not apparently same as default at power on).
     SPI_TRANSFER(0xED/*Power On Sequence Control*/, 0x64, 0x03, 0x12, 0x81); // Not sure what the effect is, set to default as per ILI9341 Application Notes v0.6 (2011/03/11) document (which is not apparently same as default at power on).
 #if ILI9341_UPDATE_FRAMERATE == ILI9341_FRAMERATE_119_HZ // Setting pump ratio if update rate is less than 119 Hz does not look good but produces shimmering in panning motion.
-    SPI_TRANSFER(0xF7/*Pump Ratio Control*/, ILI9341_PUMP_CONTROL); 
+    SPI_TRANSFER(0xF7/*Pump Ratio Control*/, ILI9341_PUMP_CONTROL);
 #endif
     // The following appear also in old ILI9341 Data Sheet v1.02 (2010/12/06).
     SPI_TRANSFER(0xC0/*Power Control 1*/, 0x23/*VRH=4.60V*/); // Set the GVDD level, which is a reference level for the VCOM level and the grayscale voltage level.

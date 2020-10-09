@@ -1,6 +1,6 @@
 #pragma once
 
-#include "config.h"
+#include "../config.h"
 
 // Tested with display model ER-TFT035-6 from BuyDisplay.com:
 // https://www.buydisplay.com/serial-spi-3-5-inch-tft-lcd-module-in-320x480-optl-touchscreen-ili9488

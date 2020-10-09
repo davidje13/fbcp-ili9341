@@ -1,4 +1,4 @@
-#include "config.h"
+#include "../config.h"
 
 #include "statistics.h"
 
@@ -10,13 +10,13 @@
 #include <pthread.h>
 #include <syslog.h>
 
-#include "tick.h"
+#include "../tick.h"
 #include "text.h"
-#include "spi.h"
-#include "util.h"
-#include "mailbox.h"
-#include "mem_alloc.h"
-#include "dma.h"
+#include "../spi.h"
+#include "../util.h"
+#include "../mailbox.h"
+#include "../mem_alloc.h"
+#include "../dma.h"
 
 volatile uint64_t timeWastedPollingGPU = 0;
 volatile float statsSpiBusSpeed = 0;

@@ -1,8 +1,8 @@
-#include "config.h"
+#include "../config.h"
 
 #if defined(ILI9488)
 
-#include "spi.h"
+#include "../spi.h"
 
 #include <memory.h>
 #include <stdio.h>
@@ -83,7 +83,7 @@ void InitILI9488()
 // 0x01 1 dot inversion.
 // 0x02 2 dot inversion.
 // 0x20/0x21 engage and disengage the inversion itself.
-// 
+//
 // I could not find a difference is using the three different
 // settings for 0xB4. It is left at 0x02 since that is what
 // the original test value was set to.

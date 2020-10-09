@@ -1,8 +1,8 @@
-#include "config.h"
+#include "../config.h"
 
 #ifdef SSD1351
 
-#include "spi.h"
+#include "../spi.h"
 
 #include <memory.h>
 #include <stdio.h>

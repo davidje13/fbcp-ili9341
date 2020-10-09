@@ -1,9 +1,9 @@
 #include <string.h>
 
-#include "config.h"
+#include "../config.h"
 #include "low_battery.h"
-#include "gpu.h"
-#include "spi.h"
+#include "../gpu.h"
+#include "../spi.h"
 
 #ifdef LOW_BATTERY_PIN
 
@@ -71,10 +71,10 @@ void DrawLowBatteryIcon(uint16_t *framebuffer)
   }
 }
 
-#else 
-  
+#else
+
 void InitLowBatterySystem() {}
-void PollLowBattery() {}  
+void PollLowBattery() {}
 void DrawLowBatteryIcon(uint16_t *framebuffer) {}
 
 #endif

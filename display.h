@@ -6,23 +6,23 @@
 #define TARGET_FRAME_RATE 60
 
 #if defined(ILI9341) || defined(ILI9340)
-#include "ili9341.h"
+#include "displays/ili9341.h"
 #elif defined(ILI9486L)
-#include "ili9486l.h"
+#include "displays/ili9486l.h"
 #elif defined(ILI9488)
-#include "ili9488.h"
+#include "displays/ili9488.h"
 #elif defined(ILI9486)
-#include "ili9486.h"
+#include "displays/ili9486.h"
 #elif defined(HX8357D)
-#include "hx8357d.h"
+#include "displays/hx8357d.h"
 #elif defined(ST7735R) || defined(ST7735S) || defined(ST7789) || defined(ST7789VW)
-#include "st7735r.h"
+#include "displays/st7735r.h"
 #elif defined(SSD1351)
-#include "ssd1351.h"
+#include "displays/ssd1351.h"
 #elif defined(MZ61581)
-#include "mz61581.h"
+#include "displays/mz61581.h"
 #elif defined(MPI3501)
-#include "mpi3501.h"
+#include "displays/mpi3501.h"
 #else
 #error Please reconfigure CMake with your display controller directive set!
 #endif

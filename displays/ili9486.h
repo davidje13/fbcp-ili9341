@@ -1,6 +1,6 @@
 #pragma once
 
-#include "config.h"
+#include "../config.h"
 
 // Data specific to the ILI9486 controller
 #define DISPLAY_SET_CURSOR_X 0x2A

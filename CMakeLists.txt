@@ -7,7 +7,7 @@ endif()
 include_directories(/opt/vc/include)
 link_directories(/opt/vc/lib)
 
-file(GLOB sourceFiles *.cpp)
+file(GLOB sourceFiles *.cpp displays/*.cpp extras/*.cpp)
 
 message(STATUS "Doing a ${CMAKE_BUILD_TYPE} build")
 if ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")

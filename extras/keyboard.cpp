@@ -3,10 +3,10 @@
 #include <stdio.h> // printf
 #include <stdint.h> // uint64_t
 
-#include "config.h"
+#include "../config.h"
 #include "keyboard.h"
-#include "util.h"
-#include "tick.h"
+#include "../util.h"
+#include "../tick.h"
 
 #if defined(BACKLIGHT_CONTROL_FROM_KEYBOARD) && defined(TURN_DISPLAY_OFF_AFTER_USECS_OF_INACTIVITY)
 #define READ_KEYBOARD_ENABLED

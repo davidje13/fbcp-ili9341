@@ -2,7 +2,7 @@
 
 This repository implements a driver for certain SPI-based LCD displays for Raspberry Pi A, B, 2, 3, 4 and Zero.
 
-![PiTFT display](/example.jpg "Adafruit PiTFT 2.8 with ILI9341 controller")
+![PiTFT display](/docs/example.jpg "Adafruit PiTFT 2.8 with ILI9341 controller")
 
 The work was motivated by curiosity after seeing this series of videos on the RetroManCave YouTube channel:
  - [RetroManCave: Waveshare 3.5" Raspberry Pi Screen | Review](https://www.youtube.com/watch?v=SGMC0t33C50)
@@ -238,7 +238,7 @@ To optimize the display to run as fast as possible,
 
 1. Adjust the `CDIV` value by passing the directive `-DSPI_BUS_CLOCK_DIVISOR=number` in CMake command line. Possible values are even numbers `2`, `4`, `6`, `8`, `...`. Note that since `CDIV` appears in the denominator in the formula for `SPI_speed`, smaller values result in higher bus speeds, whereas higher values make the display go slower. Initially when you don't know how fast your display can run, try starting with a safe high setting, such as `-DSPI_BUS_CLOCK_DIVISOR=30`, and work your way to smaller numbers to find the maximum speed the display can cope with. See the table at the end of the README for specific observed maximum bus speeds for different displays.
 
-2. Ensure turbo speed. This is critical for good frame rates. On the Raspberry Pi 3 Model B, the BCM2835 core runs by default at 400MHz (resulting in `400/CDIV` MHz SPI speed) **if** there is enough power provided to the Pi, and if the CPU temperature does not exceed thermal limits. If the CPU is idle, or voltage is low, the BCM2835 core will instead revert to non-turbo 250MHz state, resulting in `250/CDIV` MHz SPI speed. This effect of turbo speed on performance is significant, since 400MHz vs non-turbo 250MHz comes out to +60% of more bandwidth. Getting 60fps in Quake, Sonic or Tyrian often requires this turbo frequency, but e.g. NES and C64 emulated games can often reach 60fps even with the stock 250MHz. If for some reason under-voltage protection is kicking in even when enough power should be fed, you can [force-enable turbo when low voltage is present](https://www.raspberrypi.org/forums/viewtopic.php?f=29&t=82373) by setting the value `avoid_warnings=2` in the file `/boot/config.txt`. 
+2. Ensure turbo speed. This is critical for good frame rates. On the Raspberry Pi 3 Model B, the BCM2835 core runs by default at 400MHz (resulting in `400/CDIV` MHz SPI speed) **if** there is enough power provided to the Pi, and if the CPU temperature does not exceed thermal limits. If the CPU is idle, or voltage is low, the BCM2835 core will instead revert to non-turbo 250MHz state, resulting in `250/CDIV` MHz SPI speed. This effect of turbo speed on performance is significant, since 400MHz vs non-turbo 250MHz comes out to +60% of more bandwidth. Getting 60fps in Quake, Sonic or Tyrian often requires this turbo frequency, but e.g. NES and C64 emulated games can often reach 60fps even with the stock 250MHz. If for some reason under-voltage protection is kicking in even when enough power should be fed, you can [force-enable turbo when low voltage is present](https://www.raspberrypi.org/forums/viewtopic.php?f=29&t=82373) by setting the value `avoid_warnings=2` in the file `/boot/config.txt`.
 
 3. Perhaps a bit counterintuitively, **underclock** the core. Setting a **smaller** core frequency than the default turbo 400MHz can enable using a smaller clock divider to get a higher resulting SPI bus speed. For example, if with default `core_freq=400` SPI `CDIV=8` works (resulting in SPI bus speed `400MHz/8=50MHz`), but `CDIV=6` does not (`400MHz/6=66.67MHz` was too much), you can try lowering `core_freq=360` and set `CDIV=6` to get an effective SPI bus speed of `360MHz/6=60MHz`, a middle ground between the two that might perhaps work. Balancing `core_freq=` and `CDIV` options allows one to find the maximum SPI bus speed up to the last few kHz that the display controller can tolerate. One can also try the opposite direction and overclock, but that does then of course have all the issues that come along when overclocking. Underclocking does have the drawback that it makes the Pi run slower overall, so this is certainly a tradeoff.
 
@@ -296,7 +296,7 @@ If `USE_GPU_VSYNC` is disabled, then a busy spinning GPU frame snapshotting thre
 
 A drawback is that this kind of polling consumes more CPU time than the vsync option. The extra overhead is around +34% of CPU usage compared to the vsync method. It also requires using a background thread, and because of this, it is not feasible to be used on a single core Pi Zero. [If this polling was unnecessary](https://github.com/raspberrypi/userland/issues/440), this mode would also work on a Pi Zero, and without the added +34% CPU overhead on Pi 3B. See the Known Issues section below for more details.
 
-![PiTFT display](/framerate_smoothness.jpg "Smoothness statistics")
+![PiTFT display](/docs/framerate_smoothness.jpg "Smoothness statistics")
 
 There are two other main options that affect frame delivery timings, `#define SELF_SYNCHRONIZE_TO_GPU_VSYNC_PRODUCED_NEW_FRAMES` and `#define SAVE_BATTERY_BY_PREDICTING_FRAME_ARRIVAL_TIMES`. Check out the video [fbcp-ili9341 frame delivery smoothness test on Pi 3B and Adafruit ILI9341 at 119Hz](https://youtu.be/IqzKT33Rwjc) for a detailed side by side comparison of these different modes. The conclusions drawn from the four tested scenarios in the video are:
 
@@ -505,7 +505,7 @@ Double check the Data/Command (D/C) GPIO pin physically, and in CMake command li
 
 #### Colors look wrong on the display
 
-![BGR vs RGB and inverted colors](/wrong_colors.jpg)
+![BGR vs RGB and inverted colors](/docs/wrong_colors.jpg)
 
 If the color channels are mixed (red is blue, blue is red, green is green) like shown on the left image, pass the CMake option `-DDISPLAY_SWAP_BGR=ON` to the build.
 

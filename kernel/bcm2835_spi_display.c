@@ -321,7 +321,7 @@ void PumpSPI(void)
 }
 
 static struct timer_list my_timer;
- void my_timer_callback( unsigned long data )
+void my_timer_callback( unsigned long data )
 {
   if (shuttingDown) return;
 
@@ -415,7 +415,7 @@ static int display_initialization_thread(void *unused)
    printk("Starting timer to fire in 200ms (%ld)\n", jiffies);
   int ret = mod_timer( &my_timer, jiffies + msecs_to_jiffies(200) );
   if (ret) printk("Error in mod_timer\n");
- 
+
   return 0;
 }
 
@@ -467,7 +467,8 @@ void bcm2835_spi_display_exit(void)
   remove_proc_entry(SPI_BUS_PROC_ENTRY_FILENAME, NULL);
 
   int ret = del_timer( &my_timer );
-  if (ret) printk("The timer is still in use...\n");}
+  if (ret) printk("The timer is still in use...\n");
+}
 
 module_init(bcm2835_spi_display_init);
 module_exit(bcm2835_spi_display_exit);

@@ -1,8 +1,8 @@
-#include "config.h"
+#include "../config.h"
 
 #if defined(ILI9486) || defined(ILI9486L)
 
-#include "spi.h"
+#include "../spi.h"
 
 #include <memory.h>
 #include <stdio.h>

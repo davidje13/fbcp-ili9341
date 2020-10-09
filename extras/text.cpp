@@ -1,6 +1,6 @@
-#include "config.h"
+#include "../config.h"
 #include "text.h"
-#include "display.h"
+#include "../display.h"
 
 void DrawText(uint16_t *framebuffer, int framebufferWidth, int framebufferStrideBytes, int framebufferHeight, const char *text, int x, int y, uint16_t color, uint16_t bgColor)
 {

@@ -2,7 +2,7 @@
 
 #include <inttypes.h>
 
-#include "gpu.h"
+#include "../gpu.h"
 
 void RefreshStatisticsOverlayText(void);
 void DrawStatisticsOverlay(uint16_t *framebuffer);

@@ -1,8 +1,8 @@
-#include "config.h"
+#include "../config.h"
 
 #ifdef MPI3501
 
-#include "spi.h"
+#include "../spi.h"
 
 #include <memory.h>
 #include <stdio.h>
