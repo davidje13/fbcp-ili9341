@@ -86,31 +86,31 @@ void UpdateStatisticsNumbers()
   statsCpuFrequency = (int)MailboxRet2(0x00030002/*Get Clock Rate*/, 0x3/*ARM*/) / 1000000;
 }
 
-void DrawStatisticsOverlay(uint16_t *framebuffer)
+void DrawStatisticsOverlay(uint16_t *framebuffer, int scanlineStrideBytes)
 {
-  DrawText(framebuffer, gpuFrameWidth, gpuFramebufferScanlineStrideBytes, gpuFrameHeight, fpsText, 1, 1, fpsColor, 0);
-  DrawText(framebuffer, gpuFrameWidth, gpuFramebufferScanlineStrideBytes, gpuFrameHeight, statsFrameSkipText, strlen(fpsText)*6, 1, RGB565(31,0,0), 0);
+  DrawText(framebuffer, gpuFrameWidth, scanlineStrideBytes, gpuFrameHeight, fpsText, 1, 1, fpsColor, 0);
+  DrawText(framebuffer, gpuFrameWidth, scanlineStrideBytes, gpuFrameHeight, statsFrameSkipText, strlen(fpsText)*6, 1, RGB565(31,0,0), 0);
 
 #if DISPLAY_DRAWABLE_WIDTH > 130
 #ifdef USE_DMA_TRANSFERS
-  DrawText(framebuffer, gpuFrameWidth, gpuFramebufferScanlineStrideBytes, gpuFrameHeight, dmaChannelsText, 1, 10, RGB565(31, 44, 8), 0);
+  DrawText(framebuffer, gpuFrameWidth, scanlineStrideBytes, gpuFrameHeight, dmaChannelsText, 1, 10, RGB565(31, 44, 8), 0);
 #endif
 #ifdef USE_SPI_THREAD
-  DrawText(framebuffer, gpuFrameWidth, gpuFramebufferScanlineStrideBytes, gpuFrameHeight, spiUsagePercentageText, 75, 10, spiUsageColor, 0);
+  DrawText(framebuffer, gpuFrameWidth, scanlineStrideBytes, gpuFrameHeight, spiUsagePercentageText, 75, 10, spiUsageColor, 0);
 #endif
-  DrawText(framebuffer, gpuFrameWidth, gpuFramebufferScanlineStrideBytes, gpuFrameHeight, spiBusDataRateText, 60, 1, 0xFFFF, 0);
+  DrawText(framebuffer, gpuFrameWidth, scanlineStrideBytes, gpuFrameHeight, spiBusDataRateText, 60, 1, 0xFFFF, 0);
 #endif
 
 #if DISPLAY_DRAWABLE_WIDTH > 180
-  DrawText(framebuffer, gpuFrameWidth, gpuFramebufferScanlineStrideBytes, gpuFrameHeight, spiSpeedText, 120, 1, RGB565(31,14,20), 0);
-  DrawText(framebuffer, gpuFrameWidth, gpuFramebufferScanlineStrideBytes, gpuFrameHeight, spiSpeedText2, 120, 10, RGB565(10,24,31), 0);
-  DrawText(framebuffer, gpuFrameWidth, gpuFramebufferScanlineStrideBytes, gpuFrameHeight, cpuTemperatureText, 190, 1, cpuTemperatureColor, 0);
-  DrawText(framebuffer, gpuFrameWidth, gpuFramebufferScanlineStrideBytes, gpuFrameHeight, gpuPollingWastedText, 222, 1, gpuPollingWastedColor, 0);
+  DrawText(framebuffer, gpuFrameWidth, scanlineStrideBytes, gpuFrameHeight, spiSpeedText, 120, 1, RGB565(31,14,20), 0);
+  DrawText(framebuffer, gpuFrameWidth, scanlineStrideBytes, gpuFrameHeight, spiSpeedText2, 120, 10, RGB565(10,24,31), 0);
+  DrawText(framebuffer, gpuFrameWidth, scanlineStrideBytes, gpuFrameHeight, cpuTemperatureText, 190, 1, cpuTemperatureColor, 0);
+  DrawText(framebuffer, gpuFrameWidth, scanlineStrideBytes, gpuFrameHeight, gpuPollingWastedText, 222, 1, gpuPollingWastedColor, 0);
 #endif
 
 #if (defined(DISPLAY_FLIP_ORIENTATION_IN_SOFTWARE) && DISPLAY_DRAWABLE_HEIGHT >= 290) || (!defined(DISPLAY_FLIP_ORIENTATION_IN_SOFTWARE) && DISPLAY_DRAWABLE_WIDTH >= 290)
-  DrawText(framebuffer, gpuFrameWidth, gpuFramebufferScanlineStrideBytes, gpuFrameHeight, cpuMemoryUsedText, 250, 1, RGB565(31,50,21), 0);
-  DrawText(framebuffer, gpuFrameWidth, gpuFramebufferScanlineStrideBytes, gpuFrameHeight, gpuMemoryUsedText, 250, 10, RGB565(31,50,31), 0);
+  DrawText(framebuffer, gpuFrameWidth, scanlineStrideBytes, gpuFrameHeight, cpuMemoryUsedText, 250, 1, RGB565(31,50,21), 0);
+  DrawText(framebuffer, gpuFrameWidth, scanlineStrideBytes, gpuFrameHeight, gpuMemoryUsedText, 250, 10, RGB565(31,50,31), 0);
 #endif
 
 #ifdef FRAME_COMPLETION_TIME_STATISTICS
@@ -119,12 +119,12 @@ void DrawStatisticsOverlay(uint16_t *framebuffer)
 #define FRAMERATE_GRAPH_WIDTH gpuFrameHeight
 #define FRAMERATE_GRAPH_MIN_Y 20
 #define FRAMERATE_GRAPH_MAX_Y (gpuFrameWidth - 10)
-#define AT(x,y) ((x)*(gpuFramebufferScanlineStrideBytes>>1)+(y))
+#define AT(x,y) ((x)*(scanlineStrideBytes>>1)+(y))
 #else
 #define FRAMERATE_GRAPH_WIDTH gpuFrameWidth
 #define FRAMERATE_GRAPH_MIN_Y 20
 #define FRAMERATE_GRAPH_MAX_Y (gpuFrameHeight - 10)
-#define AT(x,y) ((y)*(gpuFramebufferScanlineStrideBytes>>1)+(x))
+#define AT(x,y) ((y)*(scanlineStrideBytes>>1)+(x))
 #endif
   for(int i = 0; i < MIN(statsFrameIntervalsSize, FRAMERATE_GRAPH_WIDTH); ++i)
   {

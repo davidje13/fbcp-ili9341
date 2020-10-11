@@ -4,7 +4,7 @@
 #include <stdint.h> // uint64_t
 
 #include "../config.h"
-#include "keyboard.h"
+#include "poll_keyboard.h"
 #include "../util.h"
 #include "../tick.h"
 
@@ -12,19 +12,18 @@
 #define READ_KEYBOARD_ENABLED
 #endif
 
+#ifdef READ_KEYBOARD_ENABLED
+
 int key_fd = -1;
 
 void OpenKeyboard()
 {
-#ifdef READ_KEYBOARD_ENABLED
   key_fd = open(KEYBOARD_INPUT_FILE, O_RDONLY|O_NONBLOCK);
   if (key_fd < 0) printf("Warning: cannot open keyboard input file " KEYBOARD_INPUT_FILE "! Try double checking that it exists, or reconfigure it in keyboard.cpp, or remove line '#define BACKLIGHT_CONTROL_FROM_KEYBOARD' in config.h if you do not want keyboard activity to factor into backlight control.\n");
-#endif
 }
 
 int ReadKeyboard()
 {
-#ifdef READ_KEYBOARD_ENABLED
   if (key_fd < 0) return 0;
   struct input_event ev;
   ssize_t bytesRead = -1;
@@ -42,20 +41,15 @@ int ReadKeyboard()
     }
   } while(bytesRead > 0);
   return numRead;
-#else
-  return 0;
-#endif
 }
 
 void CloseKeyboard()
 {
-#ifdef READ_KEYBOARD_ENABLED
   if (key_fd >= 0)
   {
     close(key_fd);
     key_fd = -1;
   }
-#endif
 }
 
 static uint64_t lastKeyboardPressTime = 0;
@@ -63,7 +57,6 @@ static uint64_t lastKeyboardPressCheckTime = 0;
 
 uint64_t TimeSinceLastKeyboardPress(void)
 {
-#ifdef READ_KEYBOARD_ENABLED
   uint64_t now = tick();
   if (now - lastKeyboardPressCheckTime >= 250000) // ReadKeyboard() takes about 8 usecs on Pi 3B, so 250msecs poll interval should be fine
   {
@@ -72,7 +65,13 @@ uint64_t TimeSinceLastKeyboardPress(void)
       lastKeyboardPressTime = now;
   }
   return now - lastKeyboardPressTime;
-#else
-  return 0;
-#endif
 }
+
+#else
+
+void OpenKeyboard() {}
+int ReadKeyboard() { return 0; }
+void CloseKeyboard() {}
+uint64_t TimeSinceLastKeyboardPress(void) { return 0; }
+
+#endif

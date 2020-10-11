@@ -26,8 +26,9 @@
 #include "mailbox.h"
 #include "diff.h"
 #include "mem_alloc.h"
-#include "extras/keyboard.h"
+#include "extras/poll_keyboard.h"
 #include "extras/low_battery.h"
+#include "extras/poll_low_battery.h"
 
 int CountNumChangedPixels(uint16_t *framebuffer, uint16_t *prevFramebuffer)
 {
@@ -88,6 +89,13 @@ void ProgramInterruptHandler(int signal)
   syscall(SYS_futex, &numNewGpuFrames, FUTEX_WAKE, 1, 0, 0, 0);
 }
 
+void DrawOverlays(uint16_t *framebuffer, int scanlineStrideBytes) {
+  DrawStatisticsOverlay(framebuffer, scanlineStrideBytes);
+  if (IsLowBattery()) {
+    DrawLowBatteryIcon(framebuffer, scanlineStrideBytes);
+  }
+}
+
 int main()
 {
   signal(SIGINT, ProgramInterruptHandler);
@@ -102,7 +110,9 @@ int main()
   InitSPI();
   displayContentsLastChanged = tick();
   displayOff = false;
+  InitDiff(DISPLAY_WIDTH, DISPLAY_HEIGHT);
   InitLowBatterySystem();
+  PollLowBattery();
 
   // Track current SPI display controller write X and Y cursors.
   int spiX = -1;
@@ -111,7 +121,6 @@ int main()
 
   InitGPU();
 
-  spans = (Span*)Malloc((gpuFrameWidth * gpuFrameHeight / 2) * sizeof(Span), "main() task spans");
   int size = gpuFramebufferSizeBytes;
 #ifdef USE_GPU_VSYNC
   // BUG in vc_dispmanx_resource_read_data(!!): If one is capturing a small subrectangle of a large screen resource rectangle, the destination pointer
@@ -275,8 +284,7 @@ int main()
 #endif
       __atomic_fetch_sub(&numNewGpuFrames, numNewFrames, __ATOMIC_SEQ_CST);
 
-      DrawStatisticsOverlay(framebuffer[0]);
-      DrawLowBatteryIcon(framebuffer[0]);
+      DrawOverlays(framebuffer[0], gpuFramebufferScanlineStrideBytes);
 
 #ifdef USE_GPU_VSYNC
 
@@ -295,8 +303,7 @@ int main()
         usleep(2000);
         frameObtainedTime = tick();
         framebufferHasNewChangedPixels = SnapshotFramebuffer(framebuffer[0]);
-        DrawStatisticsOverlay(framebuffer[0]);
-        DrawLowBatteryIcon(framebuffer[0]);
+        DrawOverlays(framebuffer[0], gpuFramebufferScanlineStrideBytes);
         framebufferHasNewChangedPixels = framebufferHasNewChangedPixels && IsNewFramebuffer(framebuffer[0], framebuffer[1]);
       }
 #else
@@ -348,29 +355,16 @@ int main()
 
     if (interlacedUpdate) frameParity = 1-frameParity; // Swap even-odd fields every second time we do an interlaced update (progressive updates ignore field order)
     int bytesTransferred = 0;
-    Span *head = 0;
-
-#if defined(ALL_TASKS_SHOULD_DMA) && defined(UPDATE_FRAMES_WITHOUT_DIFFING)
-    NoDiffChangedRectangle(head);
-#elif defined(ALL_TASKS_SHOULD_DMA) && defined(UPDATE_FRAMES_IN_SINGLE_RECTANGULAR_DIFF)
-    DiffFramebuffersToSingleChangedRectangle(framebuffer[0], framebuffer[1], head);
-#else
-    // Collect all spans in this image
-    if (framebufferHasNewChangedPixels || prevFrameWasInterlacedUpdate)
-    {
-      // If possible, utilize a faster 4-wide pixel diffing method
-#ifdef FAST_BUT_COARSE_PIXEL_DIFF
-      if (gpuFrameWidth % 4 == 0 && gpuFramebufferScanlineStrideBytes % 8 == 0)
-        DiffFramebuffersToScanlineSpansFastAndCoarse4Wide(framebuffer[0], framebuffer[1], interlacedUpdate, frameParity, head);
-      else
-#endif
-        DiffFramebuffersToScanlineSpansExact(framebuffer[0], framebuffer[1], interlacedUpdate, frameParity, head); // If disabled, or framebuffer width is not compatible, use the exact method
-    }
-
-    // Merge spans together on adjacent scanlines - works only if doing a progressive update
-    if (!interlacedUpdate)
-      MergeScanlineSpanList(head);
-#endif
+    Span *head = ComputeDiff(
+      gpuFrameWidth,
+      gpuFrameHeight,
+      gpuFramebufferScanlineStrideBytes,
+      framebuffer[0],
+      framebuffer[1],
+      framebufferHasNewChangedPixels || prevFrameWasInterlacedUpdate,
+      interlacedUpdate,
+      frameParity
+    );
 
 #ifdef USE_GPU_VSYNC
     if (head) // do we have a new frame?

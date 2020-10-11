@@ -2,24 +2,49 @@
 #include "diff.h"
 #include "util.h"
 #include "display.h"
-#include "gpu.h"
-#include "spi.h"
+#include "mem_alloc.h"
 
-Span *spans = 0;
-
-#ifdef UPDATE_FRAMES_WITHOUT_DIFFING
-// Naive non-diffing functionality: just submit the whole display contents
-void NoDiffChangedRectangle(Span *&head)
-{
-  head = spans;
-  head->x = 0;
-  head->endX = head->lastScanEndX = gpuFrameWidth;
-  head->y = 0;
-  head->endY = gpuFrameHeight;
-  head->size = gpuFrameWidth*gpuFrameHeight;
-  head->next = 0;
-}
+// Looking at SPI communication in a logic analyzer, it is observed that waiting for the finish of an SPI command FIFO causes pretty exactly one byte of delay to the command stream.
+// Therefore the time/bandwidth cost of ending the current span and starting a new span is as follows:
+// 1 byte to wait for the current SPI FIFO batch to finish,
+// +1 byte to send the cursor X coordinate change command,
+// +1 byte to wait for that FIFO to flush,
+// +2 bytes to send the new X coordinate,
+// +1 byte to wait for the FIFO to flush again,
+// +1 byte to send the data_write command,
+// +1 byte to wait for that FIFO to flush,
+// after which the communication is ready to start pushing pixels. This totals to 8 bytes, or 4 pixels, meaning that if there are 4 unchanged pixels or less between two adjacent dirty
+// spans, it is all the same to just update through those pixels as well to not have to wait to flush the FIFO.
+#if defined(ALL_TASKS_SHOULD_DMA)
+#define SPAN_MERGE_THRESHOLD 320
+#elif defined(DISPLAY_SPI_BUS_IS_16BITS_WIDE)
+#define SPAN_MERGE_THRESHOLD 10
+#elif defined(HX8357D)
+#define SPAN_MERGE_THRESHOLD 6
+#else
+#define SPAN_MERGE_THRESHOLD 4
 #endif
+
+static Span *spans = (Span*) 0;
+static int frameWidth = 0;
+static int frameHeight = 0;
+static int frameScanlineStrideBytes = 0;
+
+void InitDiff(int maxWidth, int maxHeight) {
+  spans = (Span*)Malloc((maxWidth * maxHeight / 2) * sizeof(Span), "main() task spans");
+}
+
+// Naive non-diffing functionality: just submit the whole display contents
+static Span* NoDiffChangedRectangle()
+{
+  spans->x = 0;
+  spans->endX = spans->lastScanEndX = frameWidth;
+  spans->y = 0;
+  spans->endY = frameHeight;
+  spans->size = frameWidth*frameHeight;
+  spans->next = 0;
+  return spans;
+}
 
 #ifdef UPDATE_FRAMES_IN_SINGLE_RECTANGULAR_DIFF
 // Coarse diffing of two framebuffers with tight stride, 16 pixels at a time
@@ -118,33 +143,33 @@ static int coarse_backwards_linear_diff(uint16_t *framebuffer, uint16_t *prevFra
   return endPtr - framebuffer;
 }
 
-void DiffFramebuffersToSingleChangedRectangle(uint16_t *framebuffer, uint16_t *prevFramebuffer, Span *&head)
+static Span* DiffFramebuffersToSingleChangedRectangle(uint16_t *framebuffer, uint16_t *prevFramebuffer)
 {
   int minY = 0;
   int minX = -1;
 
-  const int stride = gpuFramebufferScanlineStrideBytes>>1; // Stride as uint16 elements.
-  const int WidthAligned4 = (uint32_t)gpuFrameWidth & ~3u;
+  const int stride = frameScanlineStrideBytes>>1; // Stride as uint16 elements.
+  const int WidthAligned4 = (uint32_t)frameWidth & ~3u;
 
   uint16_t *scanline = framebuffer;
   uint16_t *prevScanline = prevFramebuffer;
 
-  static const bool framebufferSizeCompatibleWithCoarseDiff = gpuFramebufferScanlineStrideBytes == gpuFrameWidth*2 && gpuFramebufferScanlineStrideBytes*gpuFrameHeight % 32 == 0;
+  static const bool framebufferSizeCompatibleWithCoarseDiff = frameScanlineStrideBytes == frameWidth*2 && frameScanlineStrideBytes*frameHeight % 32 == 0;
   if (framebufferSizeCompatibleWithCoarseDiff)
   {
-    int numPixels = gpuFrameWidth*gpuFrameHeight;
+    int numPixels = frameWidth*frameHeight;
     int firstDiff = coarse_linear_diff(framebuffer, prevFramebuffer, framebuffer + numPixels);
     if (firstDiff == numPixels)
-      return; // No pixels changed, nothing to do.
+      return 0; // No pixels changed, nothing to do.
     // Coarse diff computes a diff at 8 adjacent pixels at a time, and returns the point to the 8-pixel aligned coordinate where the pixels began to differ.
     // Compute the precise diff position here.
     while(framebuffer[firstDiff] == prevFramebuffer[firstDiff]) ++firstDiff;
-    minX = firstDiff % gpuFrameWidth;
-    minY = firstDiff / gpuFrameWidth;
+    minX = firstDiff % frameWidth;
+    minY = firstDiff / frameWidth;
   }
   else
   {
-    while(minY < gpuFrameHeight)
+    while(minY < frameHeight)
     {
       int x = 0;
       // diff 4 pixels at a time
@@ -158,7 +183,7 @@ void DiffFramebuffersToSingleChangedRectangle(uint16_t *framebuffer, uint16_t *p
         }
       }
       // tail unaligned 0-3 pixels one by one
-      for(; x < gpuFrameWidth; ++x)
+      for(; x < frameWidth; ++x)
       {
         uint16_t diff = *(scanline+x) ^ *(prevScanline+x);
         if (diff)
@@ -171,31 +196,31 @@ void DiffFramebuffersToSingleChangedRectangle(uint16_t *framebuffer, uint16_t *p
       prevScanline += stride;
       ++minY;
     }
-    return; // No pixels changed, nothing to do.
+    return 0; // No pixels changed, nothing to do.
   }
 found_top:
 
   int maxX = -1;
-  int maxY = gpuFrameHeight-1;
+  int maxY = frameHeight-1;
 
   if (framebufferSizeCompatibleWithCoarseDiff)
   {
-    int numPixels = gpuFrameWidth*gpuFrameHeight;
+    int numPixels = frameWidth*frameHeight;
     int firstDiff = coarse_backwards_linear_diff(framebuffer, prevFramebuffer, framebuffer + numPixels);
     // Coarse diff computes a diff at 8 adjacent pixels at a time, and returns the point to the 8-pixel aligned coordinate where the pixels began to differ.
     // Compute the precise diff position here.
     while(firstDiff > 0 && framebuffer[firstDiff] == prevFramebuffer[firstDiff]) --firstDiff;
-    maxX = firstDiff % gpuFrameWidth;
-    maxY = firstDiff / gpuFrameWidth;
+    maxX = firstDiff % frameWidth;
+    maxY = firstDiff / frameWidth;
   }
   else
   {
-    scanline = framebuffer + (gpuFrameHeight - 1)*stride;
-    prevScanline = prevFramebuffer + (gpuFrameHeight - 1)*stride; // (same scanline from previous frame, not preceding scanline)
+    scanline = framebuffer + (frameHeight - 1)*stride;
+    prevScanline = prevFramebuffer + (frameHeight - 1)*stride; // (same scanline from previous frame, not preceding scanline)
 
     while(maxY >= minY)
     {
-      int x = gpuFrameWidth-1;
+      int x = frameWidth-1;
       // tail unaligned 0-3 pixels one by one
       for(; x >= WidthAligned4; --x)
       {
@@ -243,7 +268,7 @@ found_bottom:
   }
 found_left:
 
-  int rightX = gpuFrameWidth-1;
+  int rightX = frameWidth-1;
   while(rightX > maxX)
   {
     uint16_t *s = scanline + rightX;
@@ -259,41 +284,45 @@ found_left:
   }
 found_right:
 
-  head = spans;
-  head->x = leftX;
-  head->endX = rightX+1;
-  head->lastScanEndX = lastScanEndX+1;
-  head->y = minY;
-  head->endY = maxY+1;
+  spans->x = leftX;
+  spans->endX = rightX+1;
+  spans->lastScanEndX = lastScanEndX+1;
+  spans->y = minY;
+  spans->endY = maxY+1;
 
 #if defined(ALIGN_DIFF_TASKS_FOR_32B_CACHE_LINES) && defined(ALL_TASKS_SHOULD_DMA)
   // Make sure the task is a multiple of 32 bytes wide so we can use a fast DMA copy
   // algorithm later on. Currently this is only exploited in dma.cpp if ALL_TASKS_SHOULD_DMA
   // option is enabled, so only enable it there.
-  head->x = MAX(0, ALIGN_DOWN(head->x, 16));
-  head->endX = MIN(gpuFrameWidth, ALIGN_UP(head->endX, 16));
-  head->lastScanEndX = ALIGN_UP(head->lastScanEndX, 16);
+  spans->x = MAX(0, ALIGN_DOWN(spans->x, 16));
+  spans->endX = MIN(frameWidth, ALIGN_UP(spans->endX, 16));
+  spans->lastScanEndX = ALIGN_UP(spans->lastScanEndX, 16);
 #endif
 
-  head->size = (head->endX-head->x)*(head->endY-head->y-1) + (head->lastScanEndX - head->x);
-  head->next = 0;
+  spans->size = (
+    (spans->endX - spans->x) *
+    (spans->endY - spans->y - 1) +
+    (spans->lastScanEndX - spans->x)
+  );
+  spans->next = 0;
+  return spans;
 }
 #endif
 
-void DiffFramebuffersToScanlineSpansFastAndCoarse4Wide(uint16_t *framebuffer, uint16_t *prevFramebuffer, bool interlacedDiff, int interlacedFieldParity, Span *&head)
+static Span* DiffFramebuffersToScanlineSpansFastAndCoarse4Wide(uint16_t *framebuffer, uint16_t *prevFramebuffer, bool interlacedDiff, int interlacedFieldParity)
 {
   int numSpans = 0;
   int y = interlacedDiff ? interlacedFieldParity : 0;
   int yInc = interlacedDiff ? 2 : 1;
   // If doing an interlaced update, skip over every second scanline.
-  int scanlineInc = interlacedDiff ? (gpuFramebufferScanlineStrideBytes>>2) : (gpuFramebufferScanlineStrideBytes>>3);
-  uint64_t *scanline = (uint64_t *)(framebuffer + y*(gpuFramebufferScanlineStrideBytes>>1));
-  uint64_t *prevScanline = (uint64_t *)(prevFramebuffer + y*(gpuFramebufferScanlineStrideBytes>>1)); // (same scanline from previous frame, not preceding scanline)
+  int scanlineInc = interlacedDiff ? (frameScanlineStrideBytes>>2) : (frameScanlineStrideBytes>>3);
+  uint64_t *scanline = (uint64_t *)(framebuffer + y*(frameScanlineStrideBytes>>1));
+  uint64_t *prevScanline = (uint64_t *)(prevFramebuffer + y*(frameScanlineStrideBytes>>1)); // (same scanline from previous frame, not preceding scanline)
 
-  const int W = gpuFrameWidth>>2;
+  const int W = frameWidth>>2;
 
   Span *span = spans;
-  while(y < gpuFrameHeight)
+  while(y < frameHeight)
   {
     uint16_t *scanlineStart = (uint16_t *)scanline;
 
@@ -324,7 +353,7 @@ void DiffFramebuffersToScanlineSpansFastAndCoarse4Wide(uint16_t *framebuffer, ui
           }
           else
           {
-            spanEnd = scanlineStart + gpuFrameWidth;
+            spanEnd = scanlineStart + frameWidth;
             break;
           }
         }
@@ -349,30 +378,29 @@ void DiffFramebuffersToScanlineSpansFastAndCoarse4Wide(uint16_t *framebuffer, ui
     prevScanline += scanlineInc;
   }
 
-  if (numSpans > 0)
-  {
-    head = &spans[0];
-    spans[numSpans-1].next = 0;
-  }
-  else
-    head = 0;
+  if (numSpans == 0)
+    return 0;
+
+  spans[numSpans-1].next = 0;
+  return spans;
 }
 
-void DiffFramebuffersToScanlineSpansExact(uint16_t *framebuffer, uint16_t *prevFramebuffer, bool interlacedDiff, int interlacedFieldParity, Span *&head)
+static Span* DiffFramebuffersToScanlineSpansExact(uint16_t *framebuffer, uint16_t *prevFramebuffer, bool interlacedDiff, int interlacedFieldParity)
 {
   int numSpans = 0;
   int y = interlacedDiff ? interlacedFieldParity : 0;
   int yInc = interlacedDiff ? 2 : 1;
   // If doing an interlaced update, skip over every second scanline.
-  int scanlineInc = interlacedDiff ? gpuFramebufferScanlineStrideBytes : (gpuFramebufferScanlineStrideBytes>>1);
-  int scanlineEndInc = scanlineInc - gpuFrameWidth;
-  uint16_t *scanline = framebuffer + y*(gpuFramebufferScanlineStrideBytes>>1);
-  uint16_t *prevScanline = prevFramebuffer + y*(gpuFramebufferScanlineStrideBytes>>1); // (same scanline from previous frame, not preceding scanline)
+  int scanlineInc = interlacedDiff ? frameScanlineStrideBytes : (frameScanlineStrideBytes>>1);
+  int scanlineEndInc = scanlineInc - frameWidth;
+  uint16_t *scanline = framebuffer + y*(frameScanlineStrideBytes>>1);
+  uint16_t *prevScanline = prevFramebuffer + y*(frameScanlineStrideBytes>>1); // (same scanline from previous frame, not preceding scanline)
 
-  while(y < gpuFrameHeight)
+  Span* head = 0;
+  while(y < frameHeight)
   {
     uint16_t *scanlineStart = scanline;
-    uint16_t *scanlineEnd = scanline + gpuFrameWidth;
+    uint16_t *scanlineEnd = scanline + frameWidth;
     while(scanline < scanlineEnd)
     {
       uint16_t *spanStart;
@@ -447,9 +475,10 @@ void DiffFramebuffersToScanlineSpansExact(uint16_t *framebuffer, uint16_t *prevF
     scanline += scanlineEndInc;
     prevScanline += scanlineEndInc;
   }
+  return head;
 }
 
-void MergeScanlineSpanList(Span *listHead)
+static void MergeScanlineSpanList(Span *listHead)
 {
   for(Span *i = listHead; i; i = i->next)
   {
@@ -487,4 +516,44 @@ void MergeScanlineSpanList(Span *listHead)
         prev = j;
     }
   }
+}
+
+Span* ComputeDiff(
+  int width,
+  int height,
+  int scanlineStrideBytes,
+  uint16_t *framebuffer,
+  uint16_t *prevFramebuffer,
+  bool changed,
+  bool interlacedDiff,
+  int interlacedFieldParity
+) {
+  frameWidth = width;
+  frameHeight = height;
+  frameScanlineStrideBytes = scanlineStrideBytes;
+
+#if defined(ALL_TASKS_SHOULD_DMA) && defined(UPDATE_FRAMES_WITHOUT_DIFFING)
+  return NoDiffChangedRectangle();
+#elif defined(ALL_TASKS_SHOULD_DMA) && defined(UPDATE_FRAMES_IN_SINGLE_RECTANGULAR_DIFF)
+  return DiffFramebuffersToSingleChangedRectangle(framebuffer, prevFramebuffer);
+#else
+  if (!changed) {
+    return 0;
+  }
+  // Collect all spans in this image
+  Span* head;
+#ifdef FAST_BUT_COARSE_PIXEL_DIFF
+  // If possible, utilize a faster 4-wide pixel diffing method
+  if (frameWidth % 4 == 0 && frameScanlineStrideBytes % 8 == 0)
+    head = DiffFramebuffersToScanlineSpansFastAndCoarse4Wide(framebuffer, prevFramebuffer, interlacedDiff, interlacedFieldParity);
+  else
+#endif
+    head = DiffFramebuffersToScanlineSpansExact(framebuffer, prevFramebuffer, interlacedDiff, interlacedFieldParity); // If disabled, or framebuffer width is not compatible, use the exact method
+
+  // Merge spans together on adjacent scanlines - works only if doing a progressive update
+  if (!interlacedDiff) {
+    MergeScanlineSpanList(head);
+  }
+  return head;
+#endif
 }
