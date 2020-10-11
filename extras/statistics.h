@@ -3,9 +3,10 @@
 #include <inttypes.h>
 
 #include "../gpu.h"
+#include "../Framebuffer.h"
 
 void RefreshStatisticsOverlayText(void);
-void DrawStatisticsOverlay(uint16_t *framebuffer, int scanlineStrideBytes);
+void DrawStatisticsOverlay(const Framebuffer &framebuffer);
 
 #ifdef STATISTICS
 

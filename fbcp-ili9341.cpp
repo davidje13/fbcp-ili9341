@@ -26,9 +26,10 @@
 #include "mailbox.h"
 #include "diff.h"
 #include "mem_alloc.h"
+#include "Framebuffer.h"
 #include "extras/poll_keyboard.h"
+#include "extras/poll_battery.h"
 #include "extras/low_battery.h"
-#include "extras/poll_low_battery.h"
 
 int CountNumChangedPixels(uint16_t *framebuffer, uint16_t *prevFramebuffer)
 {
@@ -89,10 +90,10 @@ void ProgramInterruptHandler(int signal)
   syscall(SYS_futex, &numNewGpuFrames, FUTEX_WAKE, 1, 0, 0, 0);
 }
 
-void DrawOverlays(uint16_t *framebuffer, int scanlineStrideBytes) {
-  DrawStatisticsOverlay(framebuffer, scanlineStrideBytes);
+void DrawOverlays(const Framebuffer &framebuffer) {
+  DrawStatisticsOverlay(framebuffer);
   if (IsLowBattery()) {
-    DrawLowBatteryIcon(framebuffer, scanlineStrideBytes);
+    DrawLowBatteryIcon(framebuffer);
   }
 }
 
@@ -112,7 +113,8 @@ int main()
   displayOff = false;
   InitDiff(DISPLAY_WIDTH, DISPLAY_HEIGHT);
   InitLowBatterySystem();
-  PollLowBattery();
+  InitPollBatterySystem();
+  PollBattery();
 
   // Track current SPI display controller write X and Y cursors.
   int spiX = -1;
@@ -145,7 +147,22 @@ int main()
   bool prevFrameWasInterlacedUpdate = false;
   bool interlacedUpdate = false; // True if the previous update we did was an interlaced half field update.
   int frameParity = 0; // For interlaced frame updates, this is either 0 or 1 to denote evens or odds.
-  OpenKeyboard();
+
+  Framebuffer framebuffer0 = {
+    .data = framebuffer[0],
+    .width = gpuFrameWidth,
+    .height = gpuFrameHeight,
+    .strideBytes = gpuFramebufferScanlineStrideBytes
+  };
+
+  Framebuffer framebuffer1 = {
+    .data = framebuffer[1],
+    .width = gpuFrameWidth,
+    .height = gpuFrameHeight,
+    .strideBytes = gpuFramebufferScanlineStrideBytes
+  };
+
+  InitPollKeyboardSystem();
   printf("All initialized, now running main loop...\n");
   while(programRunning)
   {
@@ -275,7 +292,7 @@ int main()
       memcpy(framebuffer[0], videoCoreFramebuffer[1], gpuFramebufferSizeBytes);
 #endif
 
-      PollLowBattery();
+      PollBattery();
 
 #ifdef STATISTICS
       uint64_t now = tick();
@@ -284,7 +301,7 @@ int main()
 #endif
       __atomic_fetch_sub(&numNewGpuFrames, numNewFrames, __ATOMIC_SEQ_CST);
 
-      DrawOverlays(framebuffer[0], gpuFramebufferScanlineStrideBytes);
+      DrawOverlays(framebuffer0);
 
 #ifdef USE_GPU_VSYNC
 
@@ -303,7 +320,7 @@ int main()
         usleep(2000);
         frameObtainedTime = tick();
         framebufferHasNewChangedPixels = SnapshotFramebuffer(framebuffer[0]);
-        DrawOverlays(framebuffer[0], gpuFramebufferScanlineStrideBytes);
+        DrawOverlays(framebuffer0);
         framebufferHasNewChangedPixels = framebufferHasNewChangedPixels && IsNewFramebuffer(framebuffer[0], framebuffer[1]);
       }
 #else
@@ -356,11 +373,8 @@ int main()
     if (interlacedUpdate) frameParity = 1-frameParity; // Swap even-odd fields every second time we do an interlaced update (progressive updates ignore field order)
     int bytesTransferred = 0;
     Span *head = ComputeDiff(
-      gpuFrameWidth,
-      gpuFrameHeight,
-      gpuFramebufferScanlineStrideBytes,
-      framebuffer[0],
-      framebuffer[1],
+      framebuffer0,
+      framebuffer1,
       framebufferHasNewChangedPixels || prevFrameWasInterlacedUpdate,
       interlacedUpdate,
       frameParity
@@ -567,6 +581,6 @@ int main()
   DeinitGPU();
   DeinitSPI();
   CloseMailbox();
-  CloseKeyboard();
+  DeinitPollKeyboardSystem();
   printf("Quit.\n");
 }

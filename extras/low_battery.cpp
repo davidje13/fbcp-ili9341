@@ -43,18 +43,18 @@ void InitLowBatterySystem()
       lowBatteryIcon[y][x] = lowBatteryIcon[y][x] ? LOW_BATTERY_FORE_COLOR : LOW_BATTERY_BACK_COLOR;
 }
 
-void DrawLowBatteryIcon(uint16_t *framebuffer, int scanlineStrideBytes)
+void DrawLowBatteryIcon(const Framebuffer &framebuffer)
 {
   for(int y = 0; y < LOW_BATTERY_ICON_HEIGHT; ++y)
   {
-    int framebuffer_start_offset = (LOW_BATTERY_ICON_TOP_LEFT_Y+y)*(scanlineStrideBytes>>1)+LOW_BATTERY_ICON_TOP_LEFT_X;
-    memcpy(framebuffer+framebuffer_start_offset, lowBatteryIcon[y], LOW_BATTERY_ICON_WIDTH*2);
+    int framebuffer_start_offset = (LOW_BATTERY_ICON_TOP_LEFT_Y+y)*(framebuffer.strideBytes>>1)+LOW_BATTERY_ICON_TOP_LEFT_X;
+    memcpy(framebuffer.data+framebuffer_start_offset, lowBatteryIcon[y], LOW_BATTERY_ICON_WIDTH*2);
   }
 }
 
 #else
 
 void InitLowBatterySystem() {}
-void DrawLowBatteryIcon(uint16_t *framebuffer, int scanlineStrideBytes) {}
+void DrawLowBatteryIcon(const Framebuffer&) {}
 
 #endif

@@ -2,6 +2,8 @@
 
 #include <inttypes.h>
 
+#include "Framebuffer.h"
+
 // Spans track dirty rectangular areas on screen
 struct Span
 {
@@ -13,11 +15,8 @@ struct Span
 void InitDiff(int maxWidth, int maxHeight);
 
 Span* ComputeDiff(
-  int width,
-  int height,
-  int scanlineStrideBytes,
-  uint16_t *framebuffer,
-  uint16_t *prevFramebuffer,
+  const Framebuffer &framebuffer,
+  const Framebuffer &prevFramebuffer,
   bool changed,
   bool interlacedDiff,
   int interlacedFieldParity

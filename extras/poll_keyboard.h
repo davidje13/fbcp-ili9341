@@ -1,6 +1,5 @@
 #pragma once
 
-void OpenKeyboard(void);
-int ReadKeyboard(void);
-void CloseKeyboard(void);
+void InitPollKeyboardSystem(void);
+void DeinitPollKeyboardSystem(void);
 uint64_t TimeSinceLastKeyboardPress(void);

@@ -519,23 +519,20 @@ static void MergeScanlineSpanList(Span *listHead)
 }
 
 Span* ComputeDiff(
-  int width,
-  int height,
-  int scanlineStrideBytes,
-  uint16_t *framebuffer,
-  uint16_t *prevFramebuffer,
+  const Framebuffer &framebuffer,
+  const Framebuffer &prevFramebuffer,
   bool changed,
   bool interlacedDiff,
   int interlacedFieldParity
 ) {
-  frameWidth = width;
-  frameHeight = height;
-  frameScanlineStrideBytes = scanlineStrideBytes;
+  frameWidth = framebuffer.width;
+  frameHeight = framebuffer.height;
+  frameScanlineStrideBytes = framebuffer.strideBytes;
 
 #if defined(ALL_TASKS_SHOULD_DMA) && defined(UPDATE_FRAMES_WITHOUT_DIFFING)
   return NoDiffChangedRectangle();
 #elif defined(ALL_TASKS_SHOULD_DMA) && defined(UPDATE_FRAMES_IN_SINGLE_RECTANGULAR_DIFF)
-  return DiffFramebuffersToSingleChangedRectangle(framebuffer, prevFramebuffer);
+  return DiffFramebuffersToSingleChangedRectangle(framebuffer.data, prevFramebuffer.data);
 #else
   if (!changed) {
     return 0;
@@ -545,10 +542,10 @@ Span* ComputeDiff(
 #ifdef FAST_BUT_COARSE_PIXEL_DIFF
   // If possible, utilize a faster 4-wide pixel diffing method
   if (frameWidth % 4 == 0 && frameScanlineStrideBytes % 8 == 0)
-    head = DiffFramebuffersToScanlineSpansFastAndCoarse4Wide(framebuffer, prevFramebuffer, interlacedDiff, interlacedFieldParity);
+    head = DiffFramebuffersToScanlineSpansFastAndCoarse4Wide(framebuffer.data, prevFramebuffer.data, interlacedDiff, interlacedFieldParity);
   else
 #endif
-    head = DiffFramebuffersToScanlineSpansExact(framebuffer, prevFramebuffer, interlacedDiff, interlacedFieldParity); // If disabled, or framebuffer width is not compatible, use the exact method
+    head = DiffFramebuffersToScanlineSpansExact(framebuffer.data, prevFramebuffer.data, interlacedDiff, interlacedFieldParity); // If disabled, or framebuffer width is not compatible, use the exact method
 
   // Merge spans together on adjacent scanlines - works only if doing a progressive update
   if (!interlacedDiff) {

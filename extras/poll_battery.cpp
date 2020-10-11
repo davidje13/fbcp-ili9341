@@ -1,16 +1,21 @@
 #include <string.h>
 
 #include "../config.h"
-#include "poll_low_battery.h"
-#include "../gpu.h"
-#include "../spi.h"
+#include "poll_battery.h"
+#include "../tick.h"
+#include "../spi.h" // gpio functions
 
 #ifdef LOW_BATTERY_PIN
 
 static bool lowBattery = false;
 static uint64_t lowBatteryLastPolled = 0;
 
-void PollLowBattery()
+void InitPollBatterySystem()
+{
+  SET_GPIO_MODE(LOW_BATTERY_PIN, 0x00);
+}
+
+void PollBattery()
 {
   uint64_t now = tick();
   if (now - lowBatteryLastPolled > LOW_BATTERY_POLLING_INTERVAL)
@@ -27,7 +32,8 @@ bool IsLowBattery()
 
 #else
 
-void PollLowBattery() {}
+void InitPollBatterySystem() {}
+void PollBattery() {}
 bool IsLowBattery() { return false; }
 
 #endif

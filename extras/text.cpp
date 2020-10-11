@@ -1,20 +1,20 @@
 #include "../config.h"
 #include "text.h"
+#include "font_monaco.h"
 #include "../display.h"
 
-void DrawText(uint16_t *framebuffer, int framebufferWidth, int framebufferStrideBytes, int framebufferHeight, const char *text, int x, int y, uint16_t color, uint16_t bgColor)
+void DrawText(const Framebuffer &framebuffer, const char *text, int x, int y, uint16_t color, uint16_t bgColor)
 {
 #ifdef DISPLAY_FLIP_ORIENTATION_IN_SOFTWARE
-  const int W = framebufferHeight;
-  const int H = framebufferWidth;
-#define AT(x, y) x*framebufferStrideBytes+y
+  const int W = framebuffer.height;
+  const int H = framebuffer.width;
+#define PIXEL(x, y) FRAMEBUFFER_PIXEL(framebuffer, y, x)
 #else
-  const int W = framebufferWidth;
-  const int H = framebufferHeight;
-#define AT(x, y) y*framebufferStrideBytes+x
+  const int W = framebuffer.width;
+  const int H = framebuffer.height;
+#define PIXEL(x, y) FRAMEBUFFER_PIXEL(framebuffer, x, y)
 #endif
 
-  framebufferStrideBytes >>= 1; // to uint16 elements
   const int Y = y;
   while(*text)
   {
@@ -29,7 +29,7 @@ void DrawText(uint16_t *framebuffer, int framebufferWidth, int framebufferStride
       for(int x = X; x < endX+1; ++x)
       if (x >= 0 && y >= 0 && x < W && y < H)
       {
-        framebuffer[AT(x,y)] = bgColor;
+        PIXEL(x, y) = bgColor;
       }
 
     y = Y + monaco_height_adjust[ch];
@@ -42,13 +42,13 @@ void DrawText(uint16_t *framebuffer, int framebufferWidth, int framebufferStride
       {
         if (x >= 0 && y >= 0 && x < W && y < H)
         {
-          if ((*byte & bit)) framebuffer[AT(x,y)] = color;
-          else framebuffer[AT(x,y)] = bgColor;
+          if ((*byte & bit)) PIXEL(x, y) = color;
+          else PIXEL(x, y) = bgColor;
         }
         ++x;
         if (x == endX)
         {
-          if (y < H) framebuffer[AT(x,y)] = bgColor;
+          if (y < H) PIXEL(x, y) = bgColor;
           x = X;
           ++y;
           if (y == yEnd)

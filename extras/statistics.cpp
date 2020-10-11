@@ -86,31 +86,33 @@ void UpdateStatisticsNumbers()
   statsCpuFrequency = (int)MailboxRet2(0x00030002/*Get Clock Rate*/, 0x3/*ARM*/) / 1000000;
 }
 
-void DrawStatisticsOverlay(uint16_t *framebuffer, int scanlineStrideBytes)
+#define RGB565(r, g, b) (((r) << 11) | ((g) << 5) | (b))
+
+void DrawStatisticsOverlay(const Framebuffer &framebuffer)
 {
-  DrawText(framebuffer, gpuFrameWidth, scanlineStrideBytes, gpuFrameHeight, fpsText, 1, 1, fpsColor, 0);
-  DrawText(framebuffer, gpuFrameWidth, scanlineStrideBytes, gpuFrameHeight, statsFrameSkipText, strlen(fpsText)*6, 1, RGB565(31,0,0), 0);
+  DrawText(framebuffer, fpsText, 1, 1, fpsColor, 0);
+  DrawText(framebuffer, statsFrameSkipText, strlen(fpsText)*6, 1, RGB565(31,0,0), 0);
 
 #if DISPLAY_DRAWABLE_WIDTH > 130
 #ifdef USE_DMA_TRANSFERS
-  DrawText(framebuffer, gpuFrameWidth, scanlineStrideBytes, gpuFrameHeight, dmaChannelsText, 1, 10, RGB565(31, 44, 8), 0);
+  DrawText(framebuffer, dmaChannelsText, 1, 10, RGB565(31, 44, 8), 0);
 #endif
 #ifdef USE_SPI_THREAD
-  DrawText(framebuffer, gpuFrameWidth, scanlineStrideBytes, gpuFrameHeight, spiUsagePercentageText, 75, 10, spiUsageColor, 0);
+  DrawText(framebuffer, spiUsagePercentageText, 75, 10, spiUsageColor, 0);
 #endif
-  DrawText(framebuffer, gpuFrameWidth, scanlineStrideBytes, gpuFrameHeight, spiBusDataRateText, 60, 1, 0xFFFF, 0);
+  DrawText(framebuffer, spiBusDataRateText, 60, 1, 0xFFFF, 0);
 #endif
 
 #if DISPLAY_DRAWABLE_WIDTH > 180
-  DrawText(framebuffer, gpuFrameWidth, scanlineStrideBytes, gpuFrameHeight, spiSpeedText, 120, 1, RGB565(31,14,20), 0);
-  DrawText(framebuffer, gpuFrameWidth, scanlineStrideBytes, gpuFrameHeight, spiSpeedText2, 120, 10, RGB565(10,24,31), 0);
-  DrawText(framebuffer, gpuFrameWidth, scanlineStrideBytes, gpuFrameHeight, cpuTemperatureText, 190, 1, cpuTemperatureColor, 0);
-  DrawText(framebuffer, gpuFrameWidth, scanlineStrideBytes, gpuFrameHeight, gpuPollingWastedText, 222, 1, gpuPollingWastedColor, 0);
+  DrawText(framebuffer, spiSpeedText, 120, 1, RGB565(31,14,20), 0);
+  DrawText(framebuffer, spiSpeedText2, 120, 10, RGB565(10,24,31), 0);
+  DrawText(framebuffer, cpuTemperatureText, 190, 1, cpuTemperatureColor, 0);
+  DrawText(framebuffer, gpuPollingWastedText, 222, 1, gpuPollingWastedColor, 0);
 #endif
 
 #if (defined(DISPLAY_FLIP_ORIENTATION_IN_SOFTWARE) && DISPLAY_DRAWABLE_HEIGHT >= 290) || (!defined(DISPLAY_FLIP_ORIENTATION_IN_SOFTWARE) && DISPLAY_DRAWABLE_WIDTH >= 290)
-  DrawText(framebuffer, gpuFrameWidth, scanlineStrideBytes, gpuFrameHeight, cpuMemoryUsedText, 250, 1, RGB565(31,50,21), 0);
-  DrawText(framebuffer, gpuFrameWidth, scanlineStrideBytes, gpuFrameHeight, gpuMemoryUsedText, 250, 10, RGB565(31,50,31), 0);
+  DrawText(framebuffer, cpuMemoryUsedText, 250, 1, RGB565(31,50,21), 0);
+  DrawText(framebuffer, gpuMemoryUsedText, 250, 10, RGB565(31,50,31), 0);
 #endif
 
 #ifdef FRAME_COMPLETION_TIME_STATISTICS
@@ -119,34 +121,34 @@ void DrawStatisticsOverlay(uint16_t *framebuffer, int scanlineStrideBytes)
 #define FRAMERATE_GRAPH_WIDTH gpuFrameHeight
 #define FRAMERATE_GRAPH_MIN_Y 20
 #define FRAMERATE_GRAPH_MAX_Y (gpuFrameWidth - 10)
-#define AT(x,y) ((x)*(scanlineStrideBytes>>1)+(y))
+#define PIXEL(x, y) FRAMEBUFFER_PIXEL(framebuffer, y, x)
 #else
 #define FRAMERATE_GRAPH_WIDTH gpuFrameWidth
 #define FRAMERATE_GRAPH_MIN_Y 20
 #define FRAMERATE_GRAPH_MAX_Y (gpuFrameHeight - 10)
-#define AT(x,y) ((y)*(scanlineStrideBytes>>1)+(x))
+#define PIXEL(x, y) FRAMEBUFFER_PIXEL(framebuffer, x, y)
 #endif
   for(int i = 0; i < MIN(statsFrameIntervalsSize, FRAMERATE_GRAPH_WIDTH); ++i)
   {
     int x = FRAMERATE_GRAPH_WIDTH-1-i;
     int y = statsFrameIntervalsY[i];
-    framebuffer[AT(x, FRAMERATE_GRAPH_MIN_Y)] = RGB565(31,0,0);
-    framebuffer[AT(x, FRAMERATE_GRAPH_MIN_Y+1)] = RGB565(0,0,0);
-    framebuffer[AT(x, statsTargetFrameRateY-1)] = RGB565(0,0,0);
-    framebuffer[AT(x, statsTargetFrameRateY)] = RGB565(0,63,0);
-    framebuffer[AT(x, statsTargetFrameRateY+1)] = RGB565(0,0,0);
-    framebuffer[AT(x, statsAvgFrameRateIntervalY-1)] = RGB565(0,0,0);
-    framebuffer[AT(x, statsAvgFrameRateIntervalY)] = RGB565(29,50,7);
-    framebuffer[AT(x, statsAvgFrameRateIntervalY+1)] = RGB565(0,0,0);
-    framebuffer[AT(x, y-3)] = RGB565(0,0,0);
-    framebuffer[AT(x, y-2)] = RGB565(0,0,0);
-    framebuffer[AT(x, y-1)] = RGB565(5,11,5);
-    framebuffer[AT(x, y)] = RGB565(31,63,31);
-    framebuffer[AT(x, y+1)] = RGB565(5,11,5);
-    framebuffer[AT(x, y+2)] = RGB565(0,0,0);
-    framebuffer[AT(x, y+3)] = RGB565(0,0,0);
-    framebuffer[AT(x, FRAMERATE_GRAPH_MAX_Y-1)] = RGB565(0,0,0);
-    framebuffer[AT(x, FRAMERATE_GRAPH_MAX_Y)] = RGB565(15,30,15);
+    PIXEL(x, FRAMERATE_GRAPH_MIN_Y) = RGB565(31,0,0);
+    PIXEL(x, FRAMERATE_GRAPH_MIN_Y+1) = RGB565(0,0,0);
+    PIXEL(x, statsTargetFrameRateY-1) = RGB565(0,0,0);
+    PIXEL(x, statsTargetFrameRateY) = RGB565(0,63,0);
+    PIXEL(x, statsTargetFrameRateY+1) = RGB565(0,0,0);
+    PIXEL(x, statsAvgFrameRateIntervalY-1) = RGB565(0,0,0);
+    PIXEL(x, statsAvgFrameRateIntervalY) = RGB565(29,50,7);
+    PIXEL(x, statsAvgFrameRateIntervalY+1) = RGB565(0,0,0);
+    PIXEL(x, y-3) = RGB565(0,0,0);
+    PIXEL(x, y-2) = RGB565(0,0,0);
+    PIXEL(x, y-1) = RGB565(5,11,5);
+    PIXEL(x, y) = RGB565(31,63,31);
+    PIXEL(x, y+1) = RGB565(5,11,5);
+    PIXEL(x, y+2) = RGB565(0,0,0);
+    PIXEL(x, y+3) = RGB565(0,0,0);
+    PIXEL(x, FRAMERATE_GRAPH_MAX_Y-1) = RGB565(0,0,0);
+    PIXEL(x, FRAMERATE_GRAPH_MAX_Y) = RGB565(15,30,15);
   }
 #endif
 }
@@ -288,5 +290,5 @@ void RefreshStatisticsOverlayText()
 }
 #else
 void RefreshStatisticsOverlayText() {}
-void DrawStatisticsOverlay(uint16_t *) {}
+void DrawStatisticsOverlay(const Framebuffer&) {}
 #endif // ~STATISTICS
