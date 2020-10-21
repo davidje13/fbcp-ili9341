@@ -388,7 +388,6 @@ static inline void CommitTask(SPITask *task) // Advertises the given SPI task fr
 
 int InitSPI(void);
 void DeinitSPI(void);
-void ExecuteSPITasks(void);
 void RunSPITask(SPITask *task);
 SPITask *GetTask(void);
 void DoneTask(SPITask *task);

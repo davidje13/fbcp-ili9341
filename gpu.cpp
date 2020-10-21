@@ -22,9 +22,9 @@
 
 #define RANDOM_TEST_PATTERN_FRAME_RATE 120
 
-DISPMANX_DISPLAY_HANDLE_T display;
-DISPMANX_RESOURCE_HANDLE_T screen_resource;
-VC_RECT_T rect;
+static DISPMANX_DISPLAY_HANDLE_T display;
+static DISPMANX_RESOURCE_HANDLE_T screen_resource;
+static VC_RECT_T rect;
 
 int frameTimeHistorySize = 0;
 
@@ -40,10 +40,10 @@ int gpuFrameHeight = 0;
 int gpuFramebufferScanlineStrideBytes = 0;
 int gpuFramebufferSizeBytes = 0;
 
-int excessPixelsLeft = 0;
-int excessPixelsRight = 0;
-int excessPixelsTop = 0;
-int excessPixelsBottom = 0;
+static int excessPixelsLeft = 0;
+static int excessPixelsRight = 0;
+static int excessPixelsTop = 0;
+static int excessPixelsBottom = 0;
 
 // If one first runs content that updates at e.g. 24fps, a video perhaps, the frame rate histogram will lock to that update
 // rate and frame snapshots are done at 24fps. Later when user quits watching the video, and returns to e.g. 60fps updated
@@ -52,13 +52,13 @@ int excessPixelsBottom = 0;
 // Therefore maintain a "linear increases/geometric slowdowns" style of factor that pulls the frame snapshotting mechanism
 // to drive itself at faster rates, poking snapshots to be performed more often to discover if the content update rate is
 // more than what is currently expected.
-int eagerFastTrackToSnapshottingFramesEarlierFactor = 0;
+static int eagerFastTrackToSnapshottingFramesEarlierFactor = 0;
 
-uint64_t lastFramePollTime = 0;
+static uint64_t lastFramePollTime = 0;
 
-pthread_t gpuPollingThread;
+static pthread_t gpuPollingThread;
 
-int RoundUpToMultipleOf(int val, int multiple)
+static int RoundUpToMultipleOf(int val, int multiple)
 {
   return ((val + multiple - 1) / multiple) * multiple;
 }
@@ -166,7 +166,7 @@ bool SnapshotFramebuffer(uint16_t *destination)
 
 #ifdef USE_GPU_VSYNC
 
-void VsyncCallback(DISPMANX_UPDATE_HANDLE_T u, void *arg)
+static void VsyncCallback(DISPMANX_UPDATE_HANDLE_T u, void *arg)
 {
   // If TARGET_FRAME_RATE is e.g. 30 or 20, decimate only every second or third vsync callback to be processed.
   static int frameSkipCounter = 0;
@@ -182,7 +182,7 @@ void VsyncCallback(DISPMANX_UPDATE_HANDLE_T u, void *arg)
 
 extern volatile bool programRunning;
 
-void *gpu_polling_thread(void*)
+static void *gpu_polling_thread(void*)
 {
   uint64_t lastNewFrameReceivedTime = tick();
   while(programRunning)
@@ -263,7 +263,7 @@ void AddHistogramSample(uint64_t t)
   while(t - GET_HISTOGRAM(histogramSize-1) > HISTOGRAM_MAX_SAMPLE_AGE) --histogramSize;
 }
 
-int cmp(const void *e1, const void *e2) { return *(uint64_t*)e1 > *(uint64_t*)e2; }
+static int cmp(const void *e1, const void *e2) { return *(uint64_t*)e1 > *(uint64_t*)e2; }
 
 uint64_t EstimateFrameRateInterval()
 {

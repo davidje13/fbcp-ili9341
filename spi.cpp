@@ -102,7 +102,7 @@ void SetRealtimeThreadPriority()
 #define UNLOCK_FAST_8_CLOCKS_SPI() (spi->dlen = 2)
 
 #ifdef ALL_TASKS_SHOULD_DMA
-bool previousTaskWasSPI = true;
+static bool previousTaskWasSPI = true;
 #endif
 
 #ifdef SPI_3WIRE_PROTOCOL
@@ -250,7 +250,7 @@ void Interleave16BitSPITaskTo32Bit(SPITask *task)
 
 #endif // ~SPI_3WIRE_PROTOCOL
 
-void WaitForPolledSPITransferToFinish()
+static void WaitForPolledSPITransferToFinish()
 {
   uint32_t cs;
   while (!(((cs = spi->cs) ^ BCM2835_SPI0_CS_TA) & (BCM2835_SPI0_CS_DONE | BCM2835_SPI0_CS_TA))) // While TA=1 and DONE=0
@@ -437,7 +437,7 @@ void DoneTask(SPITask *task) // Frees the first SPI task from the queue, called 
 
 extern volatile bool programRunning;
 
-void ExecuteSPITasks()
+static void ExecuteSPITasks()
 {
 #ifndef USE_DMA_TRANSFERS
   BEGIN_SPI_COMMUNICATION();
@@ -459,10 +459,10 @@ void ExecuteSPITasks()
 }
 
 #if !defined(KERNEL_MODULE) && defined(USE_SPI_THREAD)
-pthread_t spiThread;
+static pthread_t spiThread;
 
 // A worker thread that keeps the SPI bus filled at all times
-void *spi_thread(void *unused)
+static void *spi_thread(void *unused)
 {
 #ifdef RUN_WITH_REALTIME_THREAD_PRIORITY
   SetRealtimeThreadPriority();

@@ -15,7 +15,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-int vcio = -1;
+static int vcio = -1;
 void OpenMailbox()
 {
   vcio = open("/dev/vcio", 0);
