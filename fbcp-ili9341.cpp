@@ -31,7 +31,7 @@
 #include "extras/poll_battery.h"
 #include "extras/low_battery.h"
 
-int CountNumChangedPixels(uint16_t *framebuffer, uint16_t *prevFramebuffer)
+static int CountNumChangedPixels(uint16_t *framebuffer, uint16_t *prevFramebuffer)
 {
   int changedPixels = 0;
   for(int y = 0; y < gpuFrameHeight; ++y)
@@ -46,12 +46,12 @@ int CountNumChangedPixels(uint16_t *framebuffer, uint16_t *prevFramebuffer)
   return changedPixels;
 }
 
-uint64_t displayContentsLastChanged = 0;
-bool displayOff = false;
+static uint64_t displayContentsLastChanged = 0;
+static bool displayOff = false;
 
 volatile bool programRunning = true;
 
-const char *SignalToString(int signal)
+static const char *SignalToString(int signal)
 {
   if (signal == SIGINT) return "SIGINT";
   if (signal == SIGQUIT) return "SIGQUIT";
@@ -61,12 +61,12 @@ const char *SignalToString(int signal)
   return "?";
 }
 
-void MarkProgramQuitting()
+static void MarkProgramQuitting()
 {
   programRunning = false;
 }
 
-void ProgramInterruptHandler(int signal)
+static void ProgramInterruptHandler(int signal)
 {
   printf("Signal %s(%d) received, quitting\n", SignalToString(signal), signal);
   static int quitHandlerCalled = 0;
@@ -90,7 +90,7 @@ void ProgramInterruptHandler(int signal)
   syscall(SYS_futex, &numNewGpuFrames, FUTEX_WAKE, 1, 0, 0, 0);
 }
 
-void DrawOverlays(const Framebuffer &framebuffer) {
+static void DrawOverlays(const Framebuffer &framebuffer) {
   DrawStatisticsOverlay(framebuffer);
   if (IsLowBattery()) {
     DrawLowBatteryIcon(framebuffer);
@@ -114,7 +114,6 @@ int main()
   InitDiff(DISPLAY_WIDTH, DISPLAY_HEIGHT);
   InitLowBatterySystem();
   InitPollBatterySystem();
-  PollBattery();
 
   // Track current SPI display controller write X and Y cursors.
   int spiX = -1;
@@ -281,13 +280,18 @@ int main()
       uint64_t framePollingStartTime = frameObtainedTime;
 
 #if defined(SAVE_BATTERY_BY_PREDICTING_FRAME_ARRIVAL_TIMES) || defined(SAVE_BATTERY_BY_SLEEPING_WHEN_IDLE)
-    uint64_t nextFrameArrivalTime = PredictNextFrameArrivalTime();
-    int64_t timeToSleep = nextFrameArrivalTime - tick();
-    if (timeToSleep > 0)
-      usleep(timeToSleep);
+      uint64_t nextFrameArrivalTime = PredictNextFrameArrivalTime();
+      int64_t timeToSleep = nextFrameArrivalTime - tick();
+      if (timeToSleep > 0)
+        usleep(timeToSleep);
 #endif
 
-      framebufferHasNewChangedPixels = SnapshotFramebuffer(framebuffer[0]);
+      if (!SnapshotFramebuffer(framebuffer[0]))
+      {
+        // DispmanX is in a bad state and is unlikely to recover; exit
+        MarkProgramQuitting();
+        break;
+      }
 #else
       memcpy(framebuffer[0], videoCoreFramebuffer[1], gpuFramebufferSizeBytes);
 #endif
@@ -319,9 +323,13 @@ int main()
       {
         usleep(2000);
         frameObtainedTime = tick();
-        framebufferHasNewChangedPixels = SnapshotFramebuffer(framebuffer[0]);
+        if (!SnapshotFramebuffer(framebuffer[0])) {
+          // DispmanX is in a bad state and is unlikely to recover; exit
+          MarkProgramQuitting();
+          break;
+        }
         DrawOverlays(framebuffer0);
-        framebufferHasNewChangedPixels = framebufferHasNewChangedPixels && IsNewFramebuffer(framebuffer[0], framebuffer[1]);
+        framebufferHasNewChangedPixels = IsNewFramebuffer(framebuffer[0], framebuffer[1]);
       }
 #else
       framebufferHasNewChangedPixels = true;

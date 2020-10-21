@@ -13,6 +13,7 @@ static uint64_t lowBatteryLastPolled = 0;
 void InitPollBatterySystem()
 {
   SET_GPIO_MODE(LOW_BATTERY_PIN, 0x00);
+  PollBattery();
 }
 
 void PollBattery()

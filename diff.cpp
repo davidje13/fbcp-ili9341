@@ -31,7 +31,7 @@ static int frameHeight = 0;
 static int frameScanlineStrideBytes = 0;
 
 void InitDiff(int maxWidth, int maxHeight) {
-  spans = (Span*)Malloc((maxWidth * maxHeight / 2) * sizeof(Span), "main() task spans");
+  spans = (Span*)Malloc((maxWidth * maxHeight / 2) * sizeof(Span), "diff.cpp spans");
 }
 
 // Naive non-diffing functionality: just submit the whole display contents

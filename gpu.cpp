@@ -14,8 +14,6 @@
 #include "extras/statistics.h"
 #include "mem_alloc.h"
 
-bool MarkProgramQuitting(void);
-
 // Uncomment these build options to make the display output a random performance test pattern instead of the actual
 // display content. Used to debug/measure performance.
 // #define RANDOM_TEST_PATTERN
@@ -125,7 +123,6 @@ bool SnapshotFramebuffer(uint16_t *destination)
   {
     // We cannot do much better here (or do not know what to do), it looks like if vc_dispmanx_snapshot() fails once, it will crash if attempted to be called again, and it will not recover. We can only terminate here. Sad :/
     printf("vc_dispmanx_snapshot() failed with return code %d! If this appears related to a change in HDMI/display resolution, see https://github.com/juj/fbcp-ili9341/issues/28 and https://github.com/raspberrypi/userland/issues/461 (try setting fbcp-ili9341 up as an infinitely restarting system service to recover)\n", failed);
-    MarkProgramQuitting();
     return false;
   }
   // BUG in vc_dispmanx_resource_read_data(!!): If one is capturing a small subrectangle of a large screen resource rectangle, the destination pointer
@@ -152,7 +149,6 @@ bool SnapshotFramebuffer(uint16_t *destination)
   if (failed)
   {
     printf("vc_dispmanx_resource_read_data failed with return code %d!\n", failed);
-    MarkProgramQuitting();
     return false;
   }
 #ifdef DISPLAY_FLIP_ORIENTATION_IN_SOFTWARE
