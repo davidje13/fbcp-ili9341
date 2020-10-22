@@ -1,5 +1,6 @@
 #include <linux/input.h> // input_event
-#include <fcntl.h> // O_RDONLY, O_NONBLOCK
+#include <fcntl.h> // open, O_RDONLY, O_NONBLOCK
+#include <unistd.h> // read, close
 #include <stdio.h> // printf
 #include <stdint.h> // uint64_t
 

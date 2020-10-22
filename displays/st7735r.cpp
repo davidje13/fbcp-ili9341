@@ -7,6 +7,7 @@
 
 #include <memory.h>
 #include <stdio.h>
+#include <unistd.h>
 
 void InitST7735R()
 {

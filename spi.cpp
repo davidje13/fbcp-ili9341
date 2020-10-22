@@ -10,6 +10,7 @@
 #include "config.h"
 #include "spi.h"
 #include "gpio.h"
+#include "tick.h"
 #include "util.h"
 #include "dma.h"
 #include "mailbox.h"

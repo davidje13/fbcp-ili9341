@@ -10,9 +10,10 @@
 #include "gpu.h"
 #include "display.h"
 #include "tick.h"
-#include "util.h"
 #include "extras/statistics.h"
 #include "mem_alloc.h"
+#include "throttle_usleep.h"
+#include "util.h"
 
 // Uncomment these build options to make the display output a random performance test pattern instead of the actual
 // display content. Used to debug/measure performance.

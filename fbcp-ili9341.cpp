@@ -22,7 +22,6 @@
 #include "extras/statistics.h"
 #include "tick.h"
 #include "display.h"
-#include "util.h"
 #include "mailbox.h"
 #include "diff.h"
 #include "mem_alloc.h"
@@ -30,6 +29,8 @@
 #include "extras/poll_keyboard.h"
 #include "extras/poll_battery.h"
 #include "extras/low_battery.h"
+#include "throttle_usleep.h"
+#include "util.h"
 
 static int CountNumChangedPixels(uint16_t *framebuffer, uint16_t *prevFramebuffer)
 {

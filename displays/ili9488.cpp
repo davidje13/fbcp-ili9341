@@ -7,6 +7,7 @@
 
 #include <memory.h>
 #include <stdio.h>
+#include <unistd.h>
 
 void InitILI9488()
 {

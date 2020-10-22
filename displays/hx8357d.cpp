@@ -9,6 +9,7 @@
 
 #include <memory.h>
 #include <stdio.h>
+#include <unistd.h>
 
 void InitHX8357D()
 {
