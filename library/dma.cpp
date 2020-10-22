@@ -11,11 +11,11 @@
 #include "dma.h"
 #include "spi.h"
 #include "gpio.h"
-#include "gpu.h"
+#include "../gpu.h"
 #include "mailbox.h"
 #include "tick.h"
-#include "throttle_usleep.h"
-#include "util.h"
+#include "../throttle_usleep.h"
+#include "../util.h"
 
 #ifdef USE_DMA_TRANSFERS
 

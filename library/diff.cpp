@@ -1,8 +1,8 @@
 #include "config.h"
 #include "diff.h"
-#include "util.h"
 #include "display.h"
 #include "mem_alloc.h"
+#include "../util.h"
 
 // Looking at SPI communication in a logic analyzer, it is observed that waiting for the finish of an SPI command FIFO causes pretty exactly one byte of delay to the command stream.
 // Therefore the time/bandwidth cost of ending the current span and starting a new span is as follows:

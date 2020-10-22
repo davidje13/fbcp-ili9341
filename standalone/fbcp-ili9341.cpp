@@ -17,20 +17,20 @@
 #include <signal.h>
 
 #include "config.h"
-#include "spi.h"
-#include "gpu.h"
-#include "extras/statistics.h"
-#include "tick.h"
-#include "display.h"
-#include "mailbox.h"
-#include "diff.h"
-#include "mem_alloc.h"
-#include "Framebuffer.h"
+#include "../library/spi.h"
+#include "../gpu.h"
+#include "../library/extras/statistics.h"
+#include "../library/tick.h"
+#include "../library/display.h"
+#include "../library/mailbox.h"
+#include "../library/diff.h"
+#include "../library/mem_alloc.h"
+#include "../library/Framebuffer.h"
 #include "extras/poll_keyboard.h"
 #include "extras/poll_battery.h"
-#include "extras/low_battery.h"
-#include "throttle_usleep.h"
-#include "util.h"
+#include "../library/extras/low_battery.h"
+#include "../throttle_usleep.h"
+#include "../util.h"
 
 static int CountNumChangedPixels(uint16_t *framebuffer, uint16_t *prevFramebuffer)
 {

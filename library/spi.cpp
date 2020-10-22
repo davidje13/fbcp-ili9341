@@ -11,10 +11,10 @@
 #include "spi.h"
 #include "gpio.h"
 #include "tick.h"
-#include "util.h"
 #include "dma.h"
 #include "mailbox.h"
 #include "mem_alloc.h"
+#include "../util.h"
 
 // Uncomment this to print out all bytes sent to the SPI bus
 // #define DEBUG_SPI_BUS_WRITES

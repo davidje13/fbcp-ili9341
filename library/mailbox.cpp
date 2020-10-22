@@ -1,6 +1,6 @@
 #include "config.h"
 #include "mailbox.h"
-#include "util.h"
+#include "../util.h"
 #include <stdio.h>
 
 #include <stdio.h>

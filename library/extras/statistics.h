@@ -2,7 +2,7 @@
 
 #include <inttypes.h>
 
-#include "../gpu.h"
+#include "../../gpu.h"
 #include "../Framebuffer.h"
 
 void RefreshStatisticsOverlayText(void);
