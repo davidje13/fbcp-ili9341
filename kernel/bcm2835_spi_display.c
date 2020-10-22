@@ -26,7 +26,7 @@
 #include "../library/config.h"
 #include "../library/display.h"
 #include "../library/spi.h"
-#include "../library/gpio.h"
+#include "../library/include/gpio.h"
 #include "../library/dma.h"
 #include "../util.h"
 

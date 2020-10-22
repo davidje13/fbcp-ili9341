@@ -10,10 +10,10 @@
 #include "config.h"
 #include "dma.h"
 #include "spi.h"
-#include "gpio.h"
+#include "include/gpio.h"
 #include "../gpu.h"
 #include "mailbox.h"
-#include "tick.h"
+#include "include/tick.h"
 #include "../throttle_usleep.h"
 #include "../util.h"
 

@@ -3,7 +3,7 @@
 #if defined(ILI9486) || defined(ILI9486L)
 
 #include "../spi.h"
-#include "../gpio.h"
+#include "../include/gpio.h"
 
 #include <memory.h>
 #include <stdio.h>

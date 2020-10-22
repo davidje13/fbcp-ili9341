@@ -20,7 +20,7 @@
 #include "../library/spi.h"
 #include "../gpu.h"
 #include "../library/extras/statistics.h"
-#include "../library/tick.h"
+#include "../library/include/tick.h"
 #include "../library/display.h"
 #include "../library/mailbox.h"
 #include "../library/diff.h"

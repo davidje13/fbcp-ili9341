@@ -9,8 +9,8 @@
 
 #include "config.h"
 #include "spi.h"
-#include "gpio.h"
-#include "tick.h"
+#include "include/gpio.h"
+#include "include/tick.h"
 #include "dma.h"
 #include "mailbox.h"
 #include "mem_alloc.h"

@@ -10,7 +10,7 @@
 #include <pthread.h>
 #include <syslog.h>
 
-#include "../tick.h"
+#include "../include/tick.h"
 #include "text.h"
 #include "../spi.h"
 #include "../mailbox.h"

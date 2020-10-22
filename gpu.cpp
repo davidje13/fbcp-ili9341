@@ -9,7 +9,7 @@
 #include "config.h"
 #include "gpu.h"
 #include "library/display.h"
-#include "library/tick.h"
+#include "library/include/tick.h"
 #include "library/extras/statistics.h"
 #include "library/mem_alloc.h"
 #include "throttle_usleep.h"

@@ -2,8 +2,8 @@
 
 #include "../config.h"
 #include "poll_battery.h"
-#include "../../library/tick.h"
-#include "../../library/gpio.h"
+#include "../../library/include/tick.h"
+#include "../../library/include/gpio.h"
 
 #ifdef LOW_BATTERY_PIN
 

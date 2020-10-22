@@ -1,6 +1,11 @@
-#pragma once
+#ifndef FBCP_GPIO_H_INCLUDED
+#define FBCP_GPIO_H_INCLUDED
 
 #include <inttypes.h>
+
+extern "C" { // Static ABI
+
+#define EXTERN_API extern __attribute__((visibility("default")))
 
 typedef enum {
   GPIO_MODE_INPUT  = 0b000,
@@ -33,4 +38,10 @@ typedef struct GPIORegisterFile
   uint32_t gpclr[2], reserved2; // GPIO Pin Output Clear registers, write a 1 to bit at index I to set the pin at index I low
   uint32_t gplev[2];
 } GPIORegisterFile;
-extern volatile GPIORegisterFile* gpio; // from spi.cpp
+EXTERN_API volatile GPIORegisterFile* gpio; // from spi.cpp
+
+#undef EXTERN_API
+
+}
+
+#endif

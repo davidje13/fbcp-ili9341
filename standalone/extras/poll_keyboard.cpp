@@ -6,7 +6,7 @@
 
 #include "../config.h"
 #include "poll_keyboard.h"
-#include "../../library/tick.h"
+#include "../../library/include/tick.h"
 
 #if defined(BACKLIGHT_CONTROL_FROM_KEYBOARD) && defined(TURN_DISPLAY_OFF_AFTER_USECS_OF_INACTIVITY)
 #define READ_KEYBOARD_ENABLED

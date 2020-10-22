@@ -3,7 +3,7 @@
 #if defined(ST7735R) || defined(ST7735S) || defined(ST7789)
 
 #include "../spi.h"
-#include "../gpio.h"
+#include "../include/gpio.h"
 
 #include <memory.h>
 #include <stdio.h>
