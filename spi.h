@@ -296,7 +296,7 @@ static inline SPITask *AllocTask(uint32_t bytes) // Returns a pointer to a new S
       if (!(spi->cs & BCM2835_SPI0_CS_TA)) spi->cs |= BCM2835_SPI0_CS_TA;
       // Wait until there are no remaining bytes to process in the far right end of the buffer - we'll write an eob marker there as soon as the read pointer has cleared it.
       // At this point the SPI queue may actually be quite empty, so don't sleep (except for now in kernel client app)
-      usleep(100);
+      throttle_usleep(100);
 #endif
       head = spiTaskMemory->queueHead;
     }
@@ -320,7 +320,7 @@ static inline SPITask *AllocTask(uint32_t bytes) // Returns a pointer to a new S
       // Hack: Pump the kernel module to start transferring in case it has stopped. TODO: Remove this line:
     if (!(spi->cs & BCM2835_SPI0_CS_TA)) spi->cs |= BCM2835_SPI0_CS_TA;
 #endif
-    usleep(100); // Since the SPI queue is full, we can afford to sleep a bit on the main thread without introducing lag.
+    throttle_usleep(100); // Since the SPI queue is full, we can afford to sleep a bit on the main thread without introducing lag.
     head = spiTaskMemory->queueHead;
   }
 

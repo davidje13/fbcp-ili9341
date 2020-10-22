@@ -192,7 +192,7 @@ static void *gpu_polling_thread(void*)
     uint64_t earliestNextFrameArrivaltime = lastNewFrameReceivedTime + 1000000/TARGET_FRAME_RATE - earlyFramePrediction;
     uint64_t now = tick();
     if (earliestNextFrameArrivaltime > now)
-      usleep(earliestNextFrameArrivaltime - now);
+      throttle_usleep(earliestNextFrameArrivaltime - now);
 #endif
 
 #if defined(SAVE_BATTERY_BY_PREDICTING_FRAME_ARRIVAL_TIMES) || defined(SAVE_BATTERY_BY_SLEEPING_WHEN_IDLE)
@@ -200,7 +200,7 @@ static void *gpu_polling_thread(void*)
     int64_t timeToSleep = nextFrameArrivalTime - tick();
     const int64_t minimumSleepTime = 150; // Don't sleep if the next frame is expected to arrive in less than this much time
     if (timeToSleep > minimumSleepTime)
-      usleep(timeToSleep - minimumSleepTime);
+      throttle_usleep(timeToSleep - minimumSleepTime);
 #endif
 
     uint64_t t0 = tick();

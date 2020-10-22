@@ -12,5 +12,7 @@ extern volatile uint64_t *systemTimerRegister;
 
 
 #ifdef NO_THROTTLING
-#define usleep(x) ((void)0)
+#define throttle_usleep(x) ((void)0)
+#else
+#define throttle_usleep usleep
 #endif

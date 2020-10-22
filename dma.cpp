@@ -377,7 +377,7 @@ void WaitForDMAFinished()
   uint64_t t0 = tick();
   while((dmaTx->cs & BCM2835_DMA_CS_ACTIVE) && programRunning)
   {
-    usleep(100);
+    throttle_usleep(100);
     if (tick() - t0 > 2000000)
     {
       printf("TX stalled\n");
@@ -389,7 +389,7 @@ void WaitForDMAFinished()
   t0 = tick();
   while((dmaRx->cs & BCM2835_DMA_CS_ACTIVE) && programRunning)
   {
-    usleep(100);
+    throttle_usleep(100);
     if (tick() - t0 > 2000000)
     {
       printf("RX stalled\n");
@@ -612,14 +612,14 @@ void SPIDMATransfer(SPITask *task)
   double pendingTaskUSecs = pendingTaskBytes * spiUsecsPerByte;
   pendingTaskUSecs -= tick() - taskStartTime;
   if (pendingTaskUSecs > 70)
-    usleep(pendingTaskUSecs-70);
+    throttle_usleep(pendingTaskUSecs-70);
 
   uint64_t dmaTaskStart = tick();
 
   CheckSPIDMAChannelsNotStolen();
   while((dmaTx->cs & BCM2835_DMA_CS_ACTIVE) && programRunning)
   {
-    usleep(250);
+    throttle_usleep(250);
     CheckSPIDMAChannelsNotStolen();
     if (tick() - dmaTaskStart > 5000000)
     {
@@ -629,7 +629,7 @@ void SPIDMATransfer(SPITask *task)
   }
   while((dmaRx->cs & BCM2835_DMA_CS_ACTIVE) && programRunning)
   {
-    usleep(250);
+    throttle_usleep(250);
     CheckSPIDMAChannelsNotStolen();
     if (tick() - dmaTaskStart > 5000000)
     {
@@ -716,7 +716,7 @@ void SPIDMATransfer(SPITask *task)
 
   double pendingTaskUSecs = task->PayloadSize() * spiUsecsPerByte;
   if (pendingTaskUSecs > 70)
-    usleep(pendingTaskUSecs-70);
+    throttle_usleep(pendingTaskUSecs-70);
 
   uint64_t dmaTaskStart = tick();
 

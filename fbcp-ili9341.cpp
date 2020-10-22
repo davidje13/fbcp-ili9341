@@ -225,7 +225,7 @@ int main()
 #ifdef STATISTICS
         uint64_t t0 = tick();
 #endif
-        if (sleepUsecs > 1000) usleep(500);
+        if (sleepUsecs > 1000) throttle_usleep(500);
 
 #ifdef STATISTICS
         uint64_t t1 = tick();
@@ -283,7 +283,7 @@ int main()
       uint64_t nextFrameArrivalTime = PredictNextFrameArrivalTime();
       int64_t timeToSleep = nextFrameArrivalTime - tick();
       if (timeToSleep > 0)
-        usleep(timeToSleep);
+        throttle_usleep(timeToSleep);
 #endif
 
       if (!SnapshotFramebuffer(framebuffer[0]))
@@ -321,7 +321,7 @@ int main()
       uint64_t timeToGiveUpThereIsNotGoingToBeANewFrame = framePollingStartTime + 1000000/TARGET_FRAME_RATE/2;
       while(!framebufferHasNewChangedPixels && tick() < timeToGiveUpThereIsNotGoingToBeANewFrame)
       {
-        usleep(2000);
+        throttle_usleep(2000);
         frameObtainedTime = tick();
         if (!SnapshotFramebuffer(framebuffer[0])) {
           // DispmanX is in a bad state and is unlikely to recover; exit
