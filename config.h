@@ -79,7 +79,7 @@
 
 // By default, if the SPI bus is idle after rendering an interlaced frame, but the GPU has not yet produced
 // a new application frame to be displayed, the same frame will be rendered again for its other field.
-// Define this option to disable this behavior, in which case when an interlaced frame is rendered, the 
+// Define this option to disable this behavior, in which case when an interlaced frame is rendered, the
 // remaining other field half of the image will never be uploaded.
 // #define THROTTLE_INTERLACING
 
@@ -224,7 +224,7 @@
 #define LOW_BATTERY_POLLING_INTERVAL 1000000
 
 // If less than this much % of the screen changes per frame, the screen is considered to be inactive, and
-// the display backlight can automatically turn off, if TURN_DISPLAY_OFF_AFTER_USECS_OF_INACTIVITY is 
+// the display backlight can automatically turn off, if TURN_DISPLAY_OFF_AFTER_USECS_OF_INACTIVITY is
 // defined.
 #define DISPLAY_CONSIDERED_INACTIVE_PERCENTAGE (5.0 / 100.0)
 

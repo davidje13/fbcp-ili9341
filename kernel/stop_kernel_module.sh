@@ -7,4 +7,3 @@ sudo pkill fbcp-ili9341-stable
 # Now safe to tear down the module
 echo Stopping kernel module bcm2835_spi_display.ko
 sudo rmmod bcm2835_spi_display.ko
-
