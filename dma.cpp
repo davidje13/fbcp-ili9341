@@ -10,6 +10,7 @@
 #include "config.h"
 #include "dma.h"
 #include "spi.h"
+#include "gpio.h"
 #include "gpu.h"
 #include "util.h"
 #include "mailbox.h"
@@ -17,6 +18,9 @@
 #ifdef USE_DMA_TRANSFERS
 
 #define BCM2835_PERI_BASE               0x3F000000
+
+extern volatile void *bcm2835; // from spi.cpp
+extern int mem_fd; // from spi.cpp
 
 SharedMemory *dmaSourceMemory = 0;
 volatile DMAChannelRegisterFile *dma0 = 0;
@@ -686,7 +690,7 @@ void SPIDMATransfer(SPITask *task)
   volatile DMAControlBlock *txcb = &cb[0];
   txcb->ti = BCM2835_DMA_TI_PERMAP(BCM2835_DMA_TI_PERMAP_SPI_TX) | BCM2835_DMA_TI_DEST_DREQ | BCM2835_DMA_TI_SRC_INC | BCM2835_DMA_TI_WAIT_RESP;
   txcb->src = dmaSourceBuffer.busAddress;
-  txcb->dst = DMA_SPI_FIFO_PHYS_ADDRESS; // Write out to the SPI peripheral 
+  txcb->dst = DMA_SPI_FIFO_PHYS_ADDRESS; // Write out to the SPI peripheral
   txcb->len = task->PayloadSize() + 4;
   txcb->stride = 0;
   txcb->next = 0;

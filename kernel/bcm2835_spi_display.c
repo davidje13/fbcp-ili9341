@@ -26,6 +26,7 @@
 #include "../config.h"
 #include "../display.h"
 #include "../spi.h"
+#include "../gpio.h"
 #include "../util.h"
 #include "../dma.h"
 

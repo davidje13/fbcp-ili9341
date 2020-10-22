@@ -9,6 +9,7 @@
 
 #include "config.h"
 #include "spi.h"
+#include "gpio.h"
 #include "util.h"
 #include "dma.h"
 #include "mailbox.h"
@@ -42,14 +43,14 @@ static uint32_t writeCounter = 0;
   DEBUG_PRINT_WRITTEN_BYTE(w); \
   } while(0)
 
-int mem_fd = -1;
-volatile void *bcm2835 = 0;
-volatile GPIORegisterFile *gpio = 0;
+int mem_fd = -1; // shared with dma.cpp
+volatile void *bcm2835 = 0; // shared with dma.cpp
+volatile GPIORegisterFile *gpio = 0; // shared with gpio.h
 volatile SPIRegisterFile *spi = 0;
 
 // Points to the system timer register. N.B. spec sheet says this is two low and high parts, in an 32-bit aligned (but not 64-bit aligned) address. Profiling shows
 // that Pi 3 Model B does allow reading this as a u64 load, and even when unaligned, it is around 30% faster to do so compared to loading in parts "lo | (hi << 32)".
-volatile uint64_t *systemTimerRegister = 0;
+volatile uint64_t *systemTimerRegister = 0; // shared with tick.h
 
 void DumpSPICS(uint32_t reg)
 {
@@ -530,29 +531,29 @@ int InitSPI()
 #if !defined(KERNEL_MODULE_CLIENT) || defined(KERNEL_MODULE_CLIENT_DRIVES)
   // By default all GPIO pins are in input mode (0x00), initialize them for SPI and GPIO writes
 #ifdef GPIO_TFT_DATA_CONTROL
-  SET_GPIO_MODE(GPIO_TFT_DATA_CONTROL, 0x01); // Data/Control pin to output (0x01)
+  SET_GPIO_MODE(GPIO_TFT_DATA_CONTROL, GPIO_MODE_OUTPUT);
 #endif
-  SET_GPIO_MODE(GPIO_SPI0_MISO, 0x04);
-  SET_GPIO_MODE(GPIO_SPI0_MOSI, 0x04);
-  SET_GPIO_MODE(GPIO_SPI0_CLK, 0x04);
+  SET_GPIO_MODE(GPIO_SPI0_MISO, GPIO_MODE_ALT0);
+  SET_GPIO_MODE(GPIO_SPI0_MOSI, GPIO_MODE_ALT0);
+  SET_GPIO_MODE(GPIO_SPI0_CLK, GPIO_MODE_ALT0);
 
 #ifdef DISPLAY_NEEDS_CHIP_SELECT_SIGNAL
   // The Adafruit 1.65" 240x240 ST7789 based display is unique compared to others that it does want to see the Chip Select line go
   // low and high to start a new command. For that display we let hardware SPI toggle the CS line, and actually run TA<-0 and TA<-1
   // transitions to let the CS line live. For most other displays, we just set CS line always enabled for the display throughout
   // fbcp-ili9341 lifetime, which is a tiny bit faster.
-  SET_GPIO_MODE(GPIO_SPI0_CE0, 0x04);
+  SET_GPIO_MODE(GPIO_SPI0_CE0, GPIO_MODE_ALT0);
 #ifdef DISPLAY_USES_CS1
-  SET_GPIO_MODE(GPIO_SPI0_CE1, 0x04);
+  SET_GPIO_MODE(GPIO_SPI0_CE1, GPIO_MODE_ALT0);
 #endif
 #else
   // Set the SPI 0 pin explicitly to output, and enable chip select on the line by setting it to low.
   // fbcp-ili9341 assumes exclusive access to the SPI0 bus, and exclusive presence of only one device on the bus,
   // which is (permanently) activated here.
-  SET_GPIO_MODE(GPIO_SPI0_CE0, 0x01);
+  SET_GPIO_MODE(GPIO_SPI0_CE0, GPIO_MODE_OUTPUT);
   CLEAR_GPIO(GPIO_SPI0_CE0);
 #ifdef DISPLAY_USES_CS1
-  SET_GPIO_MODE(GPIO_SPI0_CE1, 0x01);
+  SET_GPIO_MODE(GPIO_SPI0_CE1, GPIO_MODE_OUTPUT);
 #endif
 #endif
 
@@ -634,13 +635,13 @@ void DeinitSPI()
 
 #ifndef KERNEL_MODULE_CLIENT
 #ifdef GPIO_TFT_DATA_CONTROL
-  SET_GPIO_MODE(GPIO_TFT_DATA_CONTROL, 0);
+  SET_GPIO_MODE(GPIO_TFT_DATA_CONTROL, GPIO_MODE_INPUT);
 #endif
-  SET_GPIO_MODE(GPIO_SPI0_CE1, 0);
-  SET_GPIO_MODE(GPIO_SPI0_CE0, 0);
-  SET_GPIO_MODE(GPIO_SPI0_MISO, 0);
-  SET_GPIO_MODE(GPIO_SPI0_MOSI, 0);
-  SET_GPIO_MODE(GPIO_SPI0_CLK, 0);
+  SET_GPIO_MODE(GPIO_SPI0_CE1, GPIO_MODE_INPUT);
+  SET_GPIO_MODE(GPIO_SPI0_CE0, GPIO_MODE_INPUT);
+  SET_GPIO_MODE(GPIO_SPI0_MISO, GPIO_MODE_INPUT);
+  SET_GPIO_MODE(GPIO_SPI0_MOSI, GPIO_MODE_INPUT);
+  SET_GPIO_MODE(GPIO_SPI0_CLK, GPIO_MODE_INPUT);
 #endif
 
   if (bcm2835)

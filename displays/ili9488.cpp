@@ -3,6 +3,7 @@
 #if defined(ILI9488)
 
 #include "../spi.h"
+#include "../gpio.h"
 
 #include <memory.h>
 #include <stdio.h>
@@ -12,7 +13,7 @@ void InitILI9488()
   // If a Reset pin is defined, toggle it briefly high->low->high to enable the device. Some devices do not have a reset pin, in which case compile with GPIO_TFT_RESET_PIN left undefined.
 #if defined(GPIO_TFT_RESET_PIN) && GPIO_TFT_RESET_PIN >= 0
   printf("Resetting ili9488 display at reset GPIO pin %d\n", GPIO_TFT_RESET_PIN);
-  SET_GPIO_MODE(GPIO_TFT_RESET_PIN, 1);
+  SET_GPIO_MODE(GPIO_TFT_RESET_PIN, GPIO_MODE_OUTPUT);
   SET_GPIO(GPIO_TFT_RESET_PIN);
   usleep(120 * 1000);
   CLEAR_GPIO(GPIO_TFT_RESET_PIN);
@@ -134,7 +135,7 @@ void InitILI9488()
 void TurnBacklightOff()
 {
 #if defined(GPIO_TFT_BACKLIGHT) && defined(BACKLIGHT_CONTROL)
-  SET_GPIO_MODE(GPIO_TFT_BACKLIGHT, 0x01); // Set backlight pin to digital 0/1 output mode (0x01) in case it had been PWM controlled
+  SET_GPIO_MODE(GPIO_TFT_BACKLIGHT, GPIO_MODE_OUTPUT); // Set backlight pin to digital 0/1 output mode (0x01) in case it had been PWM controlled
   CLEAR_GPIO(GPIO_TFT_BACKLIGHT); // And turn the backlight off.
 #endif
 }
@@ -142,7 +143,7 @@ void TurnBacklightOff()
 void TurnBacklightOn()
 {
 #if defined(GPIO_TFT_BACKLIGHT) && defined(BACKLIGHT_CONTROL)
-  SET_GPIO_MODE(GPIO_TFT_BACKLIGHT, 0x01); // Set backlight pin to digital 0/1 output mode (0x01) in case it had been PWM controlled
+  SET_GPIO_MODE(GPIO_TFT_BACKLIGHT, GPIO_MODE_OUTPUT); // Set backlight pin to digital 0/1 output mode (0x01) in case it had been PWM controlled
   SET_GPIO(GPIO_TFT_BACKLIGHT); // And turn the backlight on.
 #endif
 }

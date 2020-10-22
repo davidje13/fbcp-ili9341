@@ -3,7 +3,7 @@
 #include "../config.h"
 #include "poll_battery.h"
 #include "../tick.h"
-#include "../spi.h" // gpio functions
+#include "../gpio.h"
 
 #ifdef LOW_BATTERY_PIN
 
@@ -12,7 +12,7 @@ static uint64_t lowBatteryLastPolled = 0;
 
 void InitPollBatterySystem()
 {
-  SET_GPIO_MODE(LOW_BATTERY_PIN, 0x00);
+  SET_GPIO_MODE(LOW_BATTERY_PIN, GPIO_MODE_INPUT);
   PollBattery();
 }
 

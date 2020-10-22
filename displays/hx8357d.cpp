@@ -5,6 +5,7 @@
 #ifdef HX8357D
 
 #include "../spi.h"
+#include "../gpio.h"
 
 #include <memory.h>
 #include <stdio.h>
@@ -14,7 +15,7 @@ void InitHX8357D()
   // If a Reset pin is defined, toggle it briefly high->low->high to enable the device. Some devices do not have a reset pin, in which case compile with GPIO_TFT_RESET_PIN left undefined.
 #if defined(GPIO_TFT_RESET_PIN) && GPIO_TFT_RESET_PIN >= 0
   printf("Resetting display at reset GPIO pin %d\n", GPIO_TFT_RESET_PIN);
-  SET_GPIO_MODE(GPIO_TFT_RESET_PIN, 1);
+  SET_GPIO_MODE(GPIO_TFT_RESET_PIN, GPIO_MODE_OUTPUT);
   SET_GPIO(GPIO_TFT_RESET_PIN);
   usleep(120 * 1000);
   CLEAR_GPIO(GPIO_TFT_RESET_PIN);
@@ -64,7 +65,7 @@ void InitHX8357D()
 
 #if defined(GPIO_TFT_BACKLIGHT) && defined(BACKLIGHT_CONTROL)
     printf("Setting TFT backlight on at pin %d\n", GPIO_TFT_BACKLIGHT);
-    SET_GPIO_MODE(GPIO_TFT_BACKLIGHT, 0x01); // Set backlight pin to digital 0/1 output mode (0x01) in case it had been PWM controlled
+    SET_GPIO_MODE(GPIO_TFT_BACKLIGHT, GPIO_MODE_OUTPUT); // Set backlight pin to digital 0/1 output mode (0x01) in case it had been PWM controlled
     SET_GPIO(GPIO_TFT_BACKLIGHT); // And turn the backlight on.
 #endif
 
@@ -82,7 +83,7 @@ void InitHX8357D()
 void TurnBacklightOff()
 {
 #if defined(GPIO_TFT_BACKLIGHT) && defined(BACKLIGHT_CONTROL)
-  SET_GPIO_MODE(GPIO_TFT_BACKLIGHT, 0x01); // Set backlight pin to digital 0/1 output mode (0x01) in case it had been PWM controlled
+  SET_GPIO_MODE(GPIO_TFT_BACKLIGHT, GPIO_MODE_OUTPUT); // Set backlight pin to digital 0/1 output mode (0x01) in case it had been PWM controlled
   CLEAR_GPIO(GPIO_TFT_BACKLIGHT); // And turn the backlight off.
 #endif
 }
@@ -106,7 +107,7 @@ void TurnDisplayOn()
   QUEUE_SPI_TRANSFER(0x29/*Display ON*/);
 #endif
 #if defined(GPIO_TFT_BACKLIGHT) && defined(BACKLIGHT_CONTROL)
-  SET_GPIO_MODE(GPIO_TFT_BACKLIGHT, 0x01); // Set backlight pin to digital 0/1 output mode (0x01) in case it had been PWM controlled
+  SET_GPIO_MODE(GPIO_TFT_BACKLIGHT, GPIO_MODE_OUTPUT); // Set backlight pin to digital 0/1 output mode (0x01) in case it had been PWM controlled
   SET_GPIO(GPIO_TFT_BACKLIGHT); // And turn the backlight on.
 #endif
 //  printf("Turned display ON\n");

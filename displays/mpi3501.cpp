@@ -3,6 +3,7 @@
 #ifdef MPI3501
 
 #include "../spi.h"
+#include "../gpio.h"
 
 #include <memory.h>
 #include <stdio.h>
@@ -23,7 +24,7 @@ void InitKeDeiV63()
   // If a Reset pin is defined, toggle it briefly high->low->high to enable the device. Some devices do not have a reset pin, in which case compile with GPIO_TFT_RESET_PIN left undefined.
 #if defined(GPIO_TFT_RESET_PIN) && GPIO_TFT_RESET_PIN >= 0
   printf("Resetting display at reset GPIO pin %d\n", GPIO_TFT_RESET_PIN);
-  SET_GPIO_MODE(GPIO_TFT_RESET_PIN, 1);
+  SET_GPIO_MODE(GPIO_TFT_RESET_PIN, GPIO_MODE_OUTPUT);
   SET_GPIO(GPIO_TFT_RESET_PIN);
   usleep(120 * 1000);
   CLEAR_GPIO(GPIO_TFT_RESET_PIN);
