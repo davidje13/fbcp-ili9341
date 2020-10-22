@@ -46,9 +46,6 @@ static int CountNumChangedPixels(uint16_t *framebuffer, uint16_t *prevFramebuffe
   return changedPixels;
 }
 
-static uint64_t displayContentsLastChanged = 0;
-static bool displayOff = false;
-
 volatile bool programRunning = true;
 
 static const char *SignalToString(int signal)
@@ -109,8 +106,8 @@ int main()
 #endif
   OpenMailbox();
   InitSPI();
-  displayContentsLastChanged = tick();
-  displayOff = false;
+  uint64_t displayContentsLastChanged = tick(); // Tracks inactivity interval
+  bool displayOff = false;
   InitDiff(DISPLAY_WIDTH, DISPLAY_HEIGHT);
   InitLowBatterySystem();
   InitPollBatterySystem();
@@ -143,7 +140,6 @@ int main()
   uint32_t curFrameEnd = spiTaskMemory->queueTail;
   uint32_t prevFrameEnd = spiTaskMemory->queueTail;
 
-  bool prevFrameWasInterlacedUpdate = false;
   bool interlacedUpdate = false; // True if the previous update we did was an interlaced half field update.
   int frameParity = 0; // For interlaced frame updates, this is either 0 or 1 to denote evens or odds.
 
@@ -165,7 +161,7 @@ int main()
   printf("All initialized, now running main loop...\n");
   while(programRunning)
   {
-    prevFrameWasInterlacedUpdate = interlacedUpdate;
+    bool prevFrameWasInterlacedUpdate = interlacedUpdate;
 
     // If last update was interlaced, it means we still have half of the image pending to be updated. In such a case,
     // sleep only until when we expect the next new frame of data to appear, and then continue independent of whether
