@@ -20,15 +20,14 @@
 #include "../library/spi.h"
 #include "../gpu.h"
 #include "../library/extras/statistics.h"
+#include "../library/include/fbcp.h"
 #include "../library/include/tick.h"
 #include "../library/display.h"
-#include "../library/mailbox.h"
 #include "../library/diff.h"
 #include "../library/mem_alloc.h"
 #include "../library/Framebuffer.h"
 #include "extras/poll_keyboard.h"
 #include "extras/poll_battery.h"
-#include "../library/extras/low_battery.h"
 #include "../throttle_usleep.h"
 #include "../util.h"
 
@@ -88,13 +87,6 @@ static void ProgramInterruptHandler(int signal)
   syscall(SYS_futex, &numNewGpuFrames, FUTEX_WAKE, 1, 0, 0, 0);
 }
 
-static void DrawOverlays(const Framebuffer &framebuffer) {
-  DrawStatisticsOverlay(framebuffer);
-  if (IsLowBattery()) {
-    DrawLowBatteryIcon(framebuffer);
-  }
-}
-
 int main()
 {
   signal(SIGINT, ProgramInterruptHandler);
@@ -105,12 +97,9 @@ int main()
 #ifdef RUN_WITH_REALTIME_THREAD_PRIORITY
   SetRealtimeThreadPriority();
 #endif
-  OpenMailbox();
-  InitSPI();
+  fbcp_open();
   uint64_t displayContentsLastChanged = tick(); // Tracks inactivity interval
   bool displayOff = false;
-  InitDiff(DISPLAY_WIDTH, DISPLAY_HEIGHT);
-  InitLowBatterySystem();
   InitPollBatterySystem();
 
   // Track current SPI display controller write X and Y cursors.
@@ -186,7 +175,7 @@ int main()
 #if defined(BACKLIGHT_CONTROL) && defined(TURN_DISPLAY_OFF_AFTER_USECS_OF_INACTIVITY)
         if (!displayOff && tick() - waitStart > TURN_DISPLAY_OFF_AFTER_USECS_OF_INACTIVITY)
         {
-          TurnDisplayOff();
+          fbcp_set_backlight(BACKLIGHT_OFF);
           displayOff = true;
         }
 
@@ -294,6 +283,7 @@ int main()
 #endif
 
       PollBattery();
+      fbcp_set_battery_indicator(IsLowBattery() ? BATTERY_LOW : BATTERY_OK);
 
 #ifdef STATISTICS
       uint64_t now = tick();
@@ -302,7 +292,7 @@ int main()
 #endif
       __atomic_fetch_sub(&numNewGpuFrames, numNewFrames, __ATOMIC_SEQ_CST);
 
-      DrawOverlays(framebuffer0);
+      fbcp_draw_overlay(framebuffer0.data, framebuffer0.width, framebuffer0.height, framebuffer0.strideBytes);
 
 #ifdef USE_GPU_VSYNC
 
@@ -325,7 +315,7 @@ int main()
           MarkProgramQuitting();
           break;
         }
-        DrawOverlays(framebuffer0);
+        fbcp_draw_overlay(framebuffer0.data, framebuffer0.width, framebuffer0.height, framebuffer0.strideBytes);
         framebufferHasNewChangedPixels = IsNewFramebuffer(framebuffer[0], framebuffer[1]);
       }
 #else
@@ -558,13 +548,13 @@ int main()
     {
       if (displayOff)
       {
-        TurnDisplayOn();
+        fbcp_set_backlight(BACKLIGHT_ON);
         displayOff = false;
       }
     }
     else if (!displayOff && tick() - displayContentsLastChanged > TURN_DISPLAY_OFF_AFTER_USECS_OF_INACTIVITY)
     {
-      TurnDisplayOff();
+      fbcp_set_backlight(BACKLIGHT_OFF);
       displayOff = true;
     }
 #endif
@@ -584,8 +574,7 @@ int main()
   }
 
   DeinitGPU();
-  DeinitSPI();
-  CloseMailbox();
+  fbcp_close();
   DeinitPollKeyboardSystem();
   printf("Quit.\n");
 }
