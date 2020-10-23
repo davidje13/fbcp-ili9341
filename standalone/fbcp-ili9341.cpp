@@ -127,9 +127,6 @@ int main()
   framebuffer[0] += (gpuFramebufferSizeBytes>>1);
 #endif
 
-  uint32_t curFrameEnd = spiTaskMemory->queueTail;
-  uint32_t prevFrameEnd = spiTaskMemory->queueTail;
-
   bool interlacedUpdate = false; // True if the previous update we did was an interlaced half field update.
   int frameParity = 0; // For interlaced frame updates, this is either 0 or 1 to denote evens or odds.
 
@@ -192,45 +189,7 @@ int main()
       }
     }
 
-    bool spiThreadWasWorkingHardBefore = false;
-
-    // At all times keep at most two rendered frames in the SPI task queue pending to be displayed. Only proceed to submit a new frame
-    // once the older of those has been displayed.
-    bool once = true;
-    while ((spiTaskMemory->queueTail + SPI_QUEUE_SIZE - spiTaskMemory->queueHead) % SPI_QUEUE_SIZE > (spiTaskMemory->queueTail + SPI_QUEUE_SIZE - prevFrameEnd) % SPI_QUEUE_SIZE)
-    {
-      if (spiTaskMemory->spiBytesQueued > 10000)
-        spiThreadWasWorkingHardBefore = true; // SPI thread had too much work in queue atm (2 full frames)
-
-      // Peek at the SPI thread's workload and throttle a bit if it has got a lot of work still to do.
-      double usecsUntilSpiQueueEmpty = spiTaskMemory->spiBytesQueued*spiUsecsPerByte;
-      if (usecsUntilSpiQueueEmpty > 0)
-      {
-        uint32_t bytesInQueueBefore = spiTaskMemory->spiBytesQueued;
-        uint32_t sleepUsecs = (uint32_t)(usecsUntilSpiQueueEmpty*0.4);
-#ifdef STATISTICS
-        uint64_t t0 = tick();
-#endif
-        if (sleepUsecs > 1000) throttle_usleep(500);
-
-#ifdef STATISTICS
-        uint64_t t1 = tick();
-        uint32_t bytesInQueueAfter = spiTaskMemory->spiBytesQueued;
-        bool starved = (spiTaskMemory->queueHead == spiTaskMemory->queueTail);
-        if (starved) spiThreadWasWorkingHardBefore = false;
-
-/*
-        if (once && starved)
-        {
-          printf("Had %u bytes in queue, asked to sleep for %u usecs, got %u usecs sleep, afterwards %u bytes in queue. (got %.2f%% work done)%s\n",
-            bytesInQueueBefore, sleepUsecs, (uint32_t)(t1 - t0), bytesInQueueAfter, (bytesInQueueBefore-bytesInQueueAfter)*100.0/bytesInQueueBefore,
-            starved ? "  SLEPT TOO LONG, SPI THREAD STARVED" : "");
-          once = false;
-        }
-*/
-#endif
-      }
-    }
+    fbcp_block_until_ready();
 
     int expiredFrames = 0;
     uint64_t now = tick();
@@ -533,8 +492,7 @@ int main()
     // Remember where in the command queue this frame ends, to keep track of the SPI thread's progress over it
     if (bytesTransferred > 0)
     {
-      prevFrameEnd = curFrameEnd;
-      curFrameEnd = spiTaskMemory->queueTail;
+      fbcp_mark_frame_end();
     }
 
 #if defined(BACKLIGHT_CONTROL) && defined(TURN_DISPLAY_OFF_AFTER_USECS_OF_INACTIVITY)

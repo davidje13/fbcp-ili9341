@@ -8,6 +8,7 @@
 #include "mailbox.h"
 #include "extras/low_battery.h"
 #include "extras/statistics.h"
+#include "../throttle_usleep.h"
 #include "../util.h"
 
 typedef enum {
@@ -20,6 +21,9 @@ typedef enum {
 static State curState = STATE_INIT;
 static BatteryState curBattery = BATTERY_OK;
 static BacklightState curBacklight = BACKLIGHT_ON;
+
+static uint32_t curFrameEnd;
+static uint32_t prevFrameEnd;
 
 static void SendBacklight() {
   if (curBacklight == BACKLIGHT_ON) {
@@ -40,6 +44,8 @@ extern void fbcp_open() {
 
   OpenMailbox();
   InitSPI();
+  curFrameEnd = spiTaskMemory->queueTail;
+  prevFrameEnd = spiTaskMemory->queueTail;
   SendBacklight();
   curState = STATE_OPEN;
 }
@@ -55,6 +61,33 @@ extern void fbcp_close() {
   DeinitSPI();
   CloseMailbox();
   curState = STATE_CLOSED;
+}
+
+extern void fbcp_block_until_ready() {
+  if (curState != STATE_OPEN) {
+    LOG("Attempted to call fbcp_block_until_ready when not open");
+    return;
+  }
+
+  // At all times keep at most two rendered frames in the SPI task queue pending to be displayed. Only proceed to submit a new frame
+  // once the older of those has been displayed.
+  while (
+    (spiTaskMemory->queueTail + SPI_QUEUE_SIZE - spiTaskMemory->queueHead) % SPI_QUEUE_SIZE >
+    (spiTaskMemory->queueTail + SPI_QUEUE_SIZE - prevFrameEnd) % SPI_QUEUE_SIZE
+  ) {
+    // Peek at the SPI thread's workload and throttle a bit if it has got a lot of work still to do.
+    double usecsUntilSpiQueueEmpty = spiTaskMemory->spiBytesQueued * spiUsecsPerByte;
+    if (usecsUntilSpiQueueEmpty > 0)
+    {
+      uint32_t sleepUsecs = (uint32_t)(usecsUntilSpiQueueEmpty * 0.4);
+      if (sleepUsecs > 1000) throttle_usleep(500);
+    }
+  }
+}
+
+extern void fbcp_mark_frame_end() { // temporary
+  prevFrameEnd = curFrameEnd;
+  curFrameEnd = spiTaskMemory->queueTail;
 }
 
 extern void fbcp_draw_overlay(

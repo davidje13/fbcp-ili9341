@@ -16,6 +16,12 @@ EXTERN_API void fbcp_open();
 // Stop communication with the display and switch off the backlight.
 EXTERN_API void fbcp_close();
 
+// Blocks the current thread until it is possible to submit a new frame.
+// (keep at most two rendered frames in the SPI task queue pending to be
+// displayed)
+EXTERN_API void fbcp_block_until_ready();
+EXTERN_API void fbcp_mark_frame_end(); // temporary
+
 // Renders any overlays on the given frame (statistics / battery indicator).
 EXTERN_API void fbcp_draw_overlay(
   uint16_t* data,
