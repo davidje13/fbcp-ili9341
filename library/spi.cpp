@@ -437,7 +437,9 @@ void DoneTask(SPITask *task) // Frees the first SPI task from the queue, called 
   __sync_synchronize();
 }
 
-extern volatile bool programRunning;
+#if !defined(KERNEL_MODULE) && defined(USE_SPI_THREAD)
+static pthread_t spiThread;
+static volatile boolean spiThreadRunning = false;
 
 static void ExecuteSPITasks()
 {
@@ -445,7 +447,7 @@ static void ExecuteSPITasks()
   BEGIN_SPI_COMMUNICATION();
 #endif
   {
-    while(programRunning && spiTaskMemory->queueTail != spiTaskMemory->queueHead)
+    while(spiThreadRunning && spiTaskMemory->queueTail != spiTaskMemory->queueHead)
     {
       SPITask *task = GetTask();
       if (task)
@@ -460,16 +462,13 @@ static void ExecuteSPITasks()
 #endif
 }
 
-#if !defined(KERNEL_MODULE) && defined(USE_SPI_THREAD)
-static pthread_t spiThread;
-
 // A worker thread that keeps the SPI bus filled at all times
 static void *spi_thread(void *unused)
 {
 #ifdef RUN_WITH_REALTIME_THREAD_PRIORITY
   SetRealtimeThreadPriority();
 #endif
-  while(programRunning)
+  while(spiThreadRunning)
   {
     if (spiTaskMemory->queueTail != spiTaskMemory->queueHead)
     {
@@ -482,7 +481,7 @@ static void *spi_thread(void *unused)
       spiThreadSleepStartTime = t0;
       __atomic_store_n(&spiThreadSleeping, 1, __ATOMIC_RELAXED);
 #endif
-      if (programRunning) syscall(SYS_futex, &spiTaskMemory->queueTail, FUTEX_WAIT, spiTaskMemory->queueHead, 0, 0, 0); // Start sleeping until we get new tasks
+      if (spiThreadRunning) syscall(SYS_futex, &spiTaskMemory->queueTail, FUTEX_WAIT, spiTaskMemory->queueHead, 0, 0, 0); // Start sleeping until we get new tasks
 #ifdef STATISTICS
       __atomic_store_n(&spiThreadSleeping, 0, __ATOMIC_RELAXED);
       uint64_t t1 = tick();
@@ -608,6 +607,7 @@ int InitSPI()
   // Create a dedicated thread to feed the SPI bus. While this is fast, it consumes a lot of CPU. It would be best to replace
   // this thread with a kernel module that processes the created SPI task queue using interrupts. (while juggling the GPIO D/C line as well)
   printf("Creating SPI task thread\n");
+  spiThreadRunning = true;
   int rc = pthread_create(&spiThread, NULL, spi_thread, NULL); // After creating the thread, it is assumed to have ownership of the SPI bus, so no SPI chat on the main thread after this.
   if (rc != 0) FATAL_ERROR("Failed to create SPI thread!");
 #else
@@ -624,6 +624,7 @@ int InitSPI()
 void DeinitSPI()
 {
 #ifdef USE_SPI_THREAD
+  spiThreadRunning = false;
   pthread_join(spiThread, NULL);
   spiThread = (pthread_t)0;
 #endif
