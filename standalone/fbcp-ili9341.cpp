@@ -304,22 +304,22 @@ int main()
       // Therefore even while we do get a smooth 16.666.. msec interval vsync signal, we have no idea whether the application has actually produced a new frame at that time. Therefore
       // we must keep polling for frames until we find one that it has produced.
 #ifdef SELF_SYNCHRONIZE_TO_GPU_VSYNC_PRODUCED_NEW_FRAMES
-      framebufferHasNewChangedPixels = framebufferHasNewChangedPixels && IsNewFramebuffer(framebuffer[0], framebuffer[1]);
       uint64_t timeToGiveUpThereIsNotGoingToBeANewFrame = framePollingStartTime + 1000000/TARGET_FRAME_RATE/2;
-      while(!framebufferHasNewChangedPixels && tick() < timeToGiveUpThereIsNotGoingToBeANewFrame)
+      while(!IsNewFramebuffer(framebuffer0.data, framebuffer1.data))
       {
+        if (tick() >= timeToGiveUpThereIsNotGoingToBeANewFrame) {
+          framebufferHasNewChangedPixels = false;
+          break;
+        }
         throttle_usleep(2000);
         frameObtainedTime = tick();
-        if (!SnapshotFramebuffer(framebuffer[0])) {
+        if (!SnapshotFramebuffer(framebuffer0.data)) {
           // DispmanX is in a bad state and is unlikely to recover; exit
           MarkProgramQuitting();
           break;
         }
         fbcp_draw_overlay(framebuffer0.data, framebuffer0.width, framebuffer0.height, framebuffer0.strideBytes);
-        framebufferHasNewChangedPixels = IsNewFramebuffer(framebuffer[0], framebuffer[1]);
       }
-#else
-      framebufferHasNewChangedPixels = true;
 #endif
 
       numNewFrames = __atomic_load_n(&numNewGpuFrames, __ATOMIC_SEQ_CST);
