@@ -181,12 +181,12 @@ static void VsyncCallback(DISPMANX_UPDATE_HANDLE_T u, void *arg)
 
 #else // !USE_GPU_VSYNC
 
-extern volatile bool programRunning;
+static volatile boolean gpuThreadRunning = false;
 
 static void *gpu_polling_thread(void*)
 {
   uint64_t lastNewFrameReceivedTime = tick();
-  while(programRunning)
+  while(gpuThreadRunning)
   {
 #ifdef SAVE_BATTERY_BY_SLEEPING_UNTIL_TARGET_FRAME
     const int64_t earlyFramePrediction = 500;
@@ -477,6 +477,7 @@ void InitGPU()
   for(int i = 0; i < HISTOGRAM_SIZE; ++i)
     AddHistogramSample(now - 1000000ULL*(HISTOGRAM_SIZE-i) / TARGET_FRAME_RATE);
 
+  gpuThreadRunning = true;
   int rc = pthread_create(&gpuPollingThread, NULL, gpu_polling_thread, NULL); // After creating the thread, it is assumed to have ownership of the SPI bus, so no SPI chat on the main thread after this.
   if (rc != 0) FATAL_ERROR("Failed to create GPU polling thread!");
 #endif
@@ -487,6 +488,7 @@ void DeinitGPU()
 #ifdef USE_GPU_VSYNC
   if (display) vc_dispmanx_vsync_callback(display, NULL, 0);
 #else
+  gpuThreadRunning = false;
   pthread_join(gpuPollingThread, NULL);
   gpuPollingThread = (pthread_t)0;
 #endif
