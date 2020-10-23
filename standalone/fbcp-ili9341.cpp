@@ -272,14 +272,14 @@ int main()
         throttle_usleep(timeToSleep);
 #endif
 
-      if (!SnapshotFramebuffer(framebuffer[0]))
+      if (!SnapshotFramebuffer(framebuffer0.data))
       {
         // DispmanX is in a bad state and is unlikely to recover; exit
         MarkProgramQuitting();
         break;
       }
 #else
-      memcpy(framebuffer[0], videoCoreFramebuffer[1], gpuFramebufferSizeBytes);
+      memcpy(framebuffer0.data, videoCoreFramebuffer[1], gpuFramebufferSizeBytes);
 #endif
 
       PollBattery();
@@ -353,7 +353,7 @@ int main()
     const double tooMuchToUpdateUsecs = timesliceToUseForScreenUpdates / desiredTargetFps; // If updating the current and new frame takes too many frames worth of allotted time, drop to interlacing.
 
 #if !defined(NO_INTERLACING) || (defined(BACKLIGHT_CONTROL) && defined(TURN_DISPLAY_OFF_AFTER_USECS_OF_INACTIVITY))
-    int numChangedPixels = framebufferHasNewChangedPixels ? CountNumChangedPixels(framebuffer[0], framebuffer[1]) : 0;
+    int numChangedPixels = framebufferHasNewChangedPixels ? CountNumChangedPixels(framebuffer0.data, framebuffer1.data) : 0;
 #endif
 
 #ifdef NO_INTERLACING
@@ -472,8 +472,8 @@ int main()
       task->cmd = DISPLAY_WRITE_PIXELS;
 
       bytesTransferred += task->PayloadSize()+1;
-      uint16_t *scanline = framebuffer[0] + i->y * (gpuFramebufferScanlineStrideBytes>>1);
-      uint16_t *prevScanline = framebuffer[1] + i->y * (gpuFramebufferScanlineStrideBytes>>1);
+      uint16_t *scanline = framebuffer0.data + i->y * (gpuFramebufferScanlineStrideBytes>>1);
+      uint16_t *prevScanline = framebuffer1.data + i->y * (gpuFramebufferScanlineStrideBytes>>1);
 
 #ifdef OFFLOAD_PIXEL_COPY_TO_DMA_CPP
       // If running a singlethreaded build without a separate SPI thread, we can offload the whole flow of the pixel data out to the code in the dma.cpp backend,
